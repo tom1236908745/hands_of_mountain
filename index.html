@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>山手線 乗車シミュレーター</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: map-first two-column board — loop map with controls on the left, live readouts on the right; one column on phones */
+:root{
+  --bg:#F2F4EF; --surface:#FFFFFF; --fg:#1B2420; --muted:#5E6A62; --rule:#DDE3DA;
+  --line:#80C241; --line-ink:#3D7A16; --water:#D3E2EA; --park:#DCE9D1; --land:#ECEFE8;
+  --c1:#3E9F55; --c2:#D6A800; --c3:#E8731C; --c4:#D3372A;
+  --font-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1512; --surface:#161E19; --fg:#E4EBE5; --muted:#97A59B; --rule:#26312A;
+    --line:#8ACF4A; --line-ink:#A8DE70; --water:#17252D; --park:#1A2A1D; --land:#121915;
+    --c1:#4FB866; --c2:#E2B92A; --c3:#F08A3A; --c4:#EF5545; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1512; --surface:#161E19; --fg:#E4EBE5; --muted:#97A59B; --rule:#26312A;
+  --line:#8ACF4A; --line-ink:#A8DE70; --water:#17252D; --park:#1A2A1D; --land:#121915;
+  --c1:#4FB866; --c2:#E2B92A; --c3:#F08A3A; --c4:#EF5545; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 36px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:.03em;display:flex;align-items:center;gap:10px;text-wrap:balance}
+h1 .mark{width:18px;height:18px;border-radius:50%;border:5px solid var(--line);flex:none;transform:translateY(1px)}
+.sub{color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.mapcard,.card{background:var(--surface);border:1px solid var(--rule);border-radius:10px}
+.mapcard{overflow:hidden;display:flex;flex-direction:column}
+.controls{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--rule)}
+.controls .grow{flex:1 1 220px;display:flex;align-items:center;gap:10px;min-width:0}
+input[type=range]{flex:1;min-width:0;accent-color:var(--line-ink)}
+button,select{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--rule);border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover,select:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--line-ink);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent}
+.seg button[aria-pressed="true"]{background:var(--line-ink);color:var(--surface)}
+#play{min-width:84px;font-weight:500}
+.jumps{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px;border-bottom:1px solid var(--rule)}
+.jumps button{font-size:12px;padding:3px 9px;background:transparent}
+.mapbox{position:relative;width:100%;aspect-ratio:4/5;max-height:80vh;background:var(--land)}
+canvas{display:block;width:100%;height:100%;touch-action:manipulation;cursor:crosshair}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font-size:12px;line-height:1.45;padding:6px 9px;border-radius:6px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));z-index:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--rule);color:var(--muted);font-size:12px;align-items:center}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.legend .ring{width:14px;height:14px;border:1.5px solid var(--line-ink);background:transparent}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h2{font-size:14px;margin:0;font-weight:700}
+.clockrow{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.clock{font-family:var(--font-num);font-size:42px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.daytag{color:var(--muted)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin:0}
+.kpis dt{font-size:11.5px;color:var(--muted);line-height:1.4}
+.kpis dd{margin:2px 0 0;font-family:var(--font-num);font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.3}
+.kpis dd small{display:block;font-family:var(--font-body);font-size:11.5px;color:var(--muted);font-weight:400}
+.st-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.st-head h2{font-size:20px}
+.pill{font-size:11.5px;border:1px solid var(--line-ink);color:var(--line-ink);border-radius:999px;padding:1px 9px}
+.st-meta{margin:0;color:var(--muted);font-size:13px}
+.st-meta b{color:var(--fg);font-family:var(--font-num);font-weight:500}
+.bars{width:100%;height:auto;display:block}
+.bars .b{fill:var(--line);opacity:.5}
+.bars .cur{fill:var(--line-ink)}
+.bars .g{stroke:var(--rule)}
+.bars text{fill:var(--muted);font-size:10px;font-family:var(--font-num)}
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rank li{display:grid;grid-template-columns:6.5em minmax(0,1fr) 5.5em;align-items:center;gap:8px;font-size:13px}
+.rank button{all:unset;cursor:pointer;text-align:left}
+.rank button:focus-visible{outline:2px solid var(--line-ink)}
+.rank .bar{height:8px;border-radius:4px;background:var(--line)}
+.rank .v{font-family:var(--font-num);text-align:right;font-variant-numeric:tabular-nums}
+.notes{color:var(--muted);font-size:12px;line-height:1.7;margin:0;padding-left:1.2em}
+.notes li+li{margin-top:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1><span class="mark" aria-hidden="true"></span>山手線 乗車シミュレーター</h1>
+    <p class="sub">時間帯ごとに、どの駅でどれだけの人が乗ってくるかを地図の上で動かして見る簡易モデル</p>
+  </header>
+
+  <div class="grid">
+    <section class="mapcard" aria-label="地図">
+      <div class="controls">
+        <button id="play" type="button">一時停止</button>
+        <div class="grow">
+          <input id="time" type="range" min="300" max="1469" step="1" value="480" aria-label="時刻">
+        </div>
+        <div class="seg" role="group" aria-label="曜日">
+          <button type="button" id="dayWk" aria-pressed="true">平日</button>
+          <button type="button" id="dayHol" aria-pressed="false">土休日</button>
+        </div>
+        <label>速度
+          <select id="speed">
+            <option value="1">1分/秒</option>
+            <option value="3" selected>3分/秒</option>
+            <option value="8">8分/秒</option>
+            <option value="20">20分/秒</option>
+          </select>
+        </label>
+      </div>
+      <div class="jumps" aria-label="時刻へ移動">
+        <button type="button" data-t="360">始発ごろ 6:00</button>
+        <button type="button" data-t="480">朝ラッシュ 8:00</button>
+        <button type="button" data-t="780">昼 13:00</button>
+        <button type="button" data-t="1080">夕ラッシュ 18:00</button>
+        <button type="button" data-t="1320">夜 22:00</button>
+      </div>
+      <div class="mapbox" id="mapbox">
+        <canvas id="map" tabindex="0" aria-label="山手線の模式地図。円の大きさがその時間帯の駅の乗車人数、点が走っている列車で色が混雑率"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <div class="legend">
+        <span><i class="ring"></i>円の大きさ＝その1時間の乗車人数</span>
+        <span>列車の混雑率：</span>
+        <span><i style="background:var(--c1)"></i>〜60%</span>
+        <span><i style="background:var(--c2)"></i>〜100%</span>
+        <span><i style="background:var(--c3)"></i>〜140%</span>
+        <span><i style="background:var(--c4)"></i>140%超</span>
+        <span>外側の線＝外回り／内側＝内回り</span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <section class="card">
+        <div class="clockrow"><div class="clock" id="clock">08:00</div><div class="daytag" id="dayTag">平日 8時台</div></div>
+        <dl class="kpis">
+          <div><dt>この1時間に30駅で乗る人</dt><dd id="kTotal">–</dd></div>
+          <div><dt>運行本数（片方向・1時間）</dt><dd id="kTph">–</dd></div>
+          <div><dt>走行中の列車の平均混雑率</dt><dd id="kAvg">–</dd></div>
+          <div><dt>いちばん混んでいる列車</dt><dd id="kMax">–</dd></div>
+        </dl>
+      </section>
+
+      <section class="card" aria-live="polite">
+        <div class="st-head"><h2 id="stName">新宿</h2><span class="pill" id="stType">ターミナル型</span></div>
+        <p class="st-meta" id="stMeta"></p>
+        <div id="stChart"></div>
+        <p class="st-meta">地図の駅をクリックすると切り替わります</p>
+      </section>
+
+      <section class="card">
+        <h2>この時間に乗る人が多い駅</h2>
+        <ol class="rank" id="rank"></ol>
+      </section>
+
+      <section class="card">
+        <h2>30駅合計の時間帯別乗車</h2>
+        <div id="lineChart"></div>
+      </section>
+
+      <ul class="notes">
+        <li>駅の1日乗車人員は、JR東日本「各駅の乗車人員」（2023年度ごろ）を丸めた概数です。JRの他線で乗る人も含む駅単位の値です。</li>
+        <li>時間帯の配分は実測ではありません。駅を住宅地型・オフィス街型・繁華街型・ターミナル型に分け、それぞれに仮の1日の分布を当てています。</li>
+        <li>列車は1周60分、11両・定員1,700人として混雑率を計算しています。駅で乗る人の55%が山手線を使うと仮定し、降りる人は時間帯と駅のタイプから決めた割合です。</li>
+        <li>地図は位置関係だけを示す模式図です。</li>
+      </ul>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+// [駅名, 緯度, 経度, 1日乗車人員(千人・概数), タイプ]  内回り順（東京→神田→…）
+const RAW = [
+  ['東京',35.6812,139.7671,403,'biz'], ['神田',35.6918,139.7709,85,'biz'],
+  ['秋葉原',35.6984,139.7731,210,'com'], ['御徒町',35.7074,139.7746,60,'com'],
+  ['上野',35.7138,139.7773,160,'hub'], ['鶯谷',35.7206,139.7781,22,'res'],
+  ['日暮里',35.7281,139.7710,105,'res'], ['西日暮里',35.7320,139.7668,90,'res'],
+  ['田端',35.7381,139.7608,40,'res'], ['駒込',35.7365,139.7470,40,'res'],
+  ['巣鴨',35.7334,139.7393,66,'res'], ['大塚',35.7317,139.7286,48,'res'],
+  ['池袋',35.7295,139.7109,500,'hub'], ['目白',35.7212,139.7065,32,'res'],
+  ['高田馬場',35.7126,139.7038,180,'res'], ['新大久保',35.7013,139.7000,40,'com'],
+  ['新宿',35.6896,139.7006,650,'hub'], ['代々木',35.6830,139.7020,60,'biz'],
+  ['原宿',35.6702,139.7027,65,'com'], ['渋谷',35.6580,139.7016,330,'com'],
+  ['恵比寿',35.6467,139.7101,120,'com'], ['目黒',35.6339,139.7157,100,'res'],
+  ['五反田',35.6262,139.7236,115,'biz'], ['大崎',35.6197,139.7286,145,'biz'],
+  ['品川',35.6285,139.7387,280,'biz'], ['高輪ゲートウェイ',35.6355,139.7407,25,'biz'],
+  ['田町',35.6457,139.7476,130,'biz'], ['浜松町',35.6555,139.7570,140,'biz'],
+  ['新橋',35.6662,139.7583,230,'biz'], ['有楽町',35.6751,139.7630,140,'biz'],
+];
+const ST = RAW.map(([name, lat, lon, k, type]) => ({ name, lat, lon, daily: k * 1000, type }));
+const N = ST.length;
+const TYPE_LABEL = { res: '住宅地型', biz: 'オフィス街型', com: '繁華街型', hub: 'ターミナル型' };
+const TYPE_DESC = { res: '朝に乗る人が多い', biz: '夕方に乗る人が多い', com: '夕方〜夜に多い', hub: '朝も夕方も多い' };
+
+// 1日の乗車の時間帯分布（0時台〜23時台、仮定）
+const P = {
+  res: [0.5,0,0,0,0.2,1.5,4,10,11,6,4,3.5,3.5,3.5,3.5,4,4.5,5.5,6,5.5,4.5,4,3.5,2],
+  biz: [1,0,0,0,0.1,0.5,1.5,3,4.5,3.5,3.5,4,5,4.5,4.5,5,6,10,11,9,7,6,5,3],
+  com: [2,0,0,0,0.1,0.5,1.5,4,6,4,4,4.5,5,5.5,5.5,6,6.5,8,8.5,8,7,6.5,5.5,4],
+  hol: [1.5,0,0,0,0.1,0.5,1.5,2.5,3.5,4.5,5.5,6,6,6.5,6.5,7,7.5,8,7.5,6.5,5.5,4.5,3.5,2],
+};
+P.hub = P.res.map((v, i) => (v + P.biz[i] + P.com[i]) / 3);
+for (const k in P) { const s = P[k].reduce((a, b) => a + b, 0); P[k] = P[k].map(v => v / s); }
+const ALIGHT_SHAPE = { res: 'biz', biz: 'res', com: 'com', hub: 'hub' }; // 朝はオフィス街で降り、夕方は住宅地で降りる
+const HOL_MULT = { res: 0.7, biz: 0.5, com: 0.95, hub: 0.8 };
+// 片方向の1時間あたり運行本数（1〜3時は運休だが、助走計算用に少数を置く）
+const TPH = {
+  wk:  [4,3,3,3,3,8,14,21,22,16,12,12,12,12,12,12,13,17,18,16,13,12,10,8],
+  hol: [4,3,3,3,3,7,10,12,13,13,13,13,13,13,13,13,13,13,13,13,12,11,9,7],
+};
+const LOOP_MIN = 60, CAP = 1700, SHARE = 0.55, K_ALIGHT = 0.11;
+
+const BOARD = {}, AP = {};
+for (const day of ['wk', 'hol']) {
+  BOARD[day] = []; AP[day] = [];
+  for (let h = 0; h < 24; h++) {
+    const b = ST.map(s => day === 'hol' ? s.daily * HOL_MULT[s.type] * P.hol[h] : s.daily * P[s.type][h]);
+    const a = ST.map(s => day === 'hol' ? s.daily * HOL_MULT[s.type] * P.hol[h] : s.daily * P[ALIGHT_SHAPE[s.type]][h]);
+    const mean = a.reduce((x, y) => x + y, 0) / N;
+    BOARD[day].push(b);
+    AP[day].push(a.map(v => mean > 0 ? Math.min(0.75, Math.max(0.02, K_ALIGHT * v / mean)) : 0.3));
+  }
+}
+const PEAK = Math.max(...BOARD.wk.flat(), ...BOARD.hol.flat());
+
+// 線路上の位置（0〜1、駅間の実距離に比例）
+const KX = Math.cos(35.68 * Math.PI / 180);
+const km = s => [(s.lon - 139.74) * 111 * KX, (s.lat - 35.68) * 111];
+const SP = []; let total = 0;
+for (let i = 0; i < N; i++) {
+  SP.push(total);
+  const a = km(ST[i]), b = km(ST[(i + 1) % N]);
+  total += Math.hypot(a[0] - b[0], a[1] - b[1]);
+}
+for (let i = 0; i < N; i++) SP[i] /= total;
+const segOf = pos => { let i = N - 1; while (i > 0 && SP[i] > pos) i--; return i; };
+const mod1 = x => ((x % 1) + 1) % 1;
+const hourOf = t => Math.floor(t / 60) % 24;
+
+// ---- シミュレーション ----
+const sim = { t: 480, day: 'wk', trains: [], lastMin: 0 };
+let quiet = false;
+const ripples = [];
+
+function balance(dir) {
+  const target = TPH[sim.day][hourOf(sim.t)];
+  const arr = sim.trains.filter(t => t.dir === dir).sort((a, b) => a.pos - b.pos);
+  if (arr.length < target) {
+    let best = 0, gap = -1;
+    for (let k = 0; k < arr.length; k++) {
+      const g = mod1(arr[(k + 1) % arr.length].pos - arr[k].pos) || 1;
+      if (g > gap) { gap = g; best = k; }
+    }
+    const pos = arr.length ? mod1(arr[best].pos + gap / 2) : 0;
+    const avg = arr.length ? arr.reduce((s, t) => s + t.load, 0) / arr.length : 0;
+    sim.trains.push({ dir, pos, load: Math.round(avg) });
+  } else if (arr.length > target) {
+    let best = 0, gap = 2;
+    for (let k = 0; k < arr.length; k++) {
+      const g = mod1(arr[(k + 1) % arr.length].pos - arr[k].pos);
+      if (g < gap) { gap = g; best = (k + 1) % arr.length; }
+    }
+    sim.trains.splice(sim.trains.indexOf(arr[best]), 1);
+  }
+}
+
+function step(dt) {
+  const h = hourOf(sim.t), b = BOARD[sim.day][h], ap = AP[sim.day][h], tph = TPH[sim.day][h];
+  const mv = dt / LOOP_MIN;
+  for (const tr of sim.trains) {
+    const old = tr.pos;
+    tr.pos = mod1(old + tr.dir * mv);
+    for (let i = 0; i < N; i++) {
+      const d = tr.dir === 1 ? mod1(SP[i] - old) : mod1(old - SP[i]);
+      if (d > 0 && d <= mv) {
+        tr.load -= Math.round(tr.load * ap[i]);
+        const on = Math.round(b[i] * SHARE / (2 * tph) * (0.85 + Math.random() * 0.3));
+        tr.load += on;
+        if (!quiet && ripples.length < 240) ripples.push({ i, dir: tr.dir, on, born: performance.now() });
+      }
+    }
+  }
+  sim.t += dt;
+  const m = Math.floor(sim.t);
+  if (m !== sim.lastMin) { sim.lastMin = m; balance(1); balance(-1); }
+}
+
+function reset(t0) {
+  const start = t0 - 75;
+  sim.trains = []; sim.t = start; sim.lastMin = Math.floor(start);
+  const n = TPH[sim.day][hourOf(start)];
+  for (const dir of [1, -1]) for (let k = 0; k < n; k++) sim.trains.push({ dir, pos: k / n, load: 0 });
+  quiet = true;
+  while (sim.t < t0) step(Math.min(0.25, t0 - sim.t));
+  quiet = false;
+  ripples.length = 0;
+}
+
+// ---- 地図 ----
+const box = document.getElementById('mapbox');
+const cv = document.getElementById('map');
+const ctx = cv.getContext('2d');
+const tip = document.getElementById('tip');
+const BB = { latMin: 35.613, latMax: 35.746, lonMin: 139.683, lonMax: 139.798 };
+let W = 0, H = 0, DPR = 1, S = 1, OX = 0, OY = 0, SF = 1, PTS = [], CEN = [0, 0];
+const TP = { 1: [], '-1': [] };
+const toXY = (lat, lon) => [OX + (lon - BB.lonMin) * 111 * KX * S, OY + (BB.latMax - lat) * 111 * S];
+
+const BAY = [[35.668,139.800],[35.661,139.769],[35.653,139.762],[35.641,139.753],[35.629,139.749],[35.616,139.746],[35.598,139.748],[35.560,139.760],[35.560,139.900],[35.668,139.900]];
+const RIVER = [[35.760,139.792],[35.736,139.803],[35.712,139.798],[35.696,139.789],[35.681,139.789],[35.668,139.778],[35.655,139.772]];
+const PARKS = [
+  ['皇居', 35.6852, 139.7528, 0.85, 0.75], ['新宿御苑', 35.6852, 139.7101, 0.6, 0.35],
+  ['代々木公園', 35.6735, 139.6965, 0.65, 0.95], ['上野公園', 35.7160, 139.7725, 0.38, 0.5],
+  ['六義園', 35.7318, 139.7463, 0.2, 0.18], ['自然教育園', 35.6380, 139.7190, 0.25, 0.22],
+];
+
+function resize() {
+  const r = box.getBoundingClientRect();
+  W = r.width; H = r.height; DPR = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  const wk = (BB.lonMax - BB.lonMin) * 111 * KX, hk = (BB.latMax - BB.latMin) * 111;
+  const pad = Math.max(10, W * 0.02);
+  S = Math.min((W - 2 * pad) / wk, (H - 2 * pad) / hk);
+  OX = (W - wk * S) / 2; OY = (H - hk * S) / 2;
+  SF = Math.max(0.7, Math.min(1.3, W / 620));
+  PTS = ST.map(s => toXY(s.lat, s.lon));
+  CEN = [PTS.reduce((a, p) => a + p[0], 0) / N, PTS.reduce((a, p) => a + p[1], 0) / N];
+  for (const dir of [1, -1]) {
+    TP[dir] = PTS.map(p => {
+      const ux = p[0] - CEN[0], uy = p[1] - CEN[1], l = Math.hypot(ux, uy) || 1;
+      const off = 5.5 * SF * (dir === 1 ? -1 : 1); // 内回り(+1)は内側の線
+      return [p[0] + ux / l * off, p[1] + uy / l * off];
+    });
+  }
+}
+
+function posPt(pos, dir) {
+  const i = segOf(pos), j = (i + 1) % N;
+  const a = SP[i], b = i + 1 < N ? SP[i + 1] : 1;
+  const f = (pos - a) / (b - a);
+  const p = TP[dir][i], q = TP[dir][j];
+  return [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f];
+}
+
+let tok = {};
+function readTok() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg','surface','fg','muted','rule','line','line-ink','water','park','land','c1','c2','c3','c4']) tok[k] = cs.getPropertyValue('--' + k).trim();
+}
+const congColor = pct => pct <= 60 ? tok.c1 : pct <= 100 ? tok.c2 : pct <= 140 ? tok.c3 : tok.c4;
+const FONT = '"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif';
+const radiusOf = v => (3 + Math.sqrt(v / PEAK) * 26) * SF;
+
+let selected = 16, hover = null;
+
+function draw(now) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = tok.land; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = tok.water; ctx.beginPath();
+  BAY.forEach(([la, lo], k) => { const [x, y] = toXY(la, lo); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = tok.water; ctx.lineWidth = 6 * SF; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
+  RIVER.forEach(([la, lo], k) => { const [x, y] = toXY(la, lo); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.stroke();
+
+  ctx.font = `500 ${10.5 * SF}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const [name, la, lo, rx, ry] of PARKS) {
+    const [x, y] = toXY(la, lo);
+    ctx.fillStyle = tok.park; ctx.beginPath();
+    ctx.ellipse(x, y, rx * S, ry * S, 0, 0, Math.PI * 2); ctx.fill();
+    if (rx >= 0.38) { ctx.fillStyle = tok.muted; ctx.globalAlpha = 0.8; ctx.fillText(name, x, y); ctx.globalAlpha = 1; }
+  }
+  { const [x, y] = toXY(35.622, 139.778); ctx.fillStyle = tok.muted; ctx.globalAlpha = 0.7; ctx.fillText('東京湾', x, y); ctx.fillText('隅田川', ...toXY(35.700, 139.806)); ctx.globalAlpha = 1; }
+
+  // 線路
+  ctx.strokeStyle = tok.line; ctx.lineWidth = 2.6 * SF;
+  for (const dir of [1, -1]) {
+    ctx.beginPath(); TP[dir].forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.stroke();
+  }
+
+  // 駅（円の大きさ＝この1時間の乗車）
+  const h = hourOf(sim.t), b = BOARD[sim.day][h];
+  for (let i = 0; i < N; i++) {
+    const [x, y] = PTS[i], r = radiusOf(b[i]);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = tok.line; ctx.globalAlpha = 0.2; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.lineWidth = i === selected ? 2.2 : 1.2; ctx.strokeStyle = i === selected ? tok.fg : tok['line-ink']; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 2.2 * SF, 0, Math.PI * 2); ctx.fillStyle = tok.surface; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = tok.fg; ctx.stroke();
+  }
+
+  // 駅名
+  const showAll = W >= 460;
+  for (let i = 0; i < N; i++) {
+    if (!showAll && ST[i].daily < 100000 && i !== selected) continue;
+    const [x, y] = PTS[i];
+    const ux = x - CEN[0], uy = y - CEN[1], l = Math.hypot(ux, uy) || 1;
+    const r = radiusOf(b[i]) + 5 * SF;
+    const lx = x + ux / l * r, ly = y + uy / l * r;
+    ctx.textAlign = ux / l > 0.35 ? 'left' : ux / l < -0.35 ? 'right' : 'center';
+    ctx.textBaseline = uy / l > 0.35 ? 'top' : uy / l < -0.35 ? 'bottom' : 'middle';
+    const big = ST[i].daily >= 200000 || i === selected;
+    ctx.font = `${big ? 700 : 500} ${(big ? 12 : 10.5) * SF}px ${FONT}`;
+    ctx.fillStyle = big ? tok.fg : tok.muted;
+    ctx.fillText(ST[i].name, lx, ly);
+  }
+
+  // 乗車の波紋
+  for (let k = ripples.length - 1; k >= 0; k--) {
+    const rp = ripples[k], a = (now - rp.born) / 900;
+    if (a >= 1) { ripples.splice(k, 1); continue; }
+    const [x, y] = TP[rp.dir][rp.i];
+    ctx.beginPath(); ctx.arc(x, y, (3 + a * 12) * SF, 0, Math.PI * 2);
+    ctx.strokeStyle = tok['line-ink']; ctx.globalAlpha = (1 - a) * 0.6; ctx.lineWidth = 1.2; ctx.stroke();
+    if (rp.i === selected && rp.on > 0) {
+      ctx.globalAlpha = 1 - a; ctx.fillStyle = tok.fg; ctx.font = `600 ${11 * SF}px ${FONT}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('+' + rp.on.toLocaleString() + '人', x, y - 8 * SF - a * 16 * SF);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // 列車（色＝混雑率）
+  for (const tr of sim.trains) {
+    const [x, y] = posPt(tr.pos, tr.dir);
+    tr.x = x; tr.y = y;
+    ctx.beginPath(); ctx.arc(x, y, (tr === hover ? 6.5 : 4.6) * SF, 0, Math.PI * 2);
+    ctx.fillStyle = congColor(tr.load / CAP * 100); ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = tok.surface; ctx.stroke();
+  }
+}
+
+// ---- パネル ----
+const $ = id => document.getElementById(id);
+const fmtPeople = n => n >= 10000 ? '約' + (n / 10000).toFixed(1) + '万人' : '約' + Math.round(n).toLocaleString() + '人';
+const fmtShort = v => v >= 10000 ? (v / 10000).toFixed(v % 10000 ? 1 : 0) + '万' : Math.round(v).toLocaleString();
+const pad2 = n => String(n).padStart(2, '0');
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p; return 10 * p; }
+const HOURS = [5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0];
+
+function barChart(vals, cur, label) {
+  const w = 340, h = 132, pl = 34, pr = 4, pt = 8, pb = 20, ih = h - pt - pb;
+  const bw = (w - pl - pr) / HOURS.length;
+  const top = niceMax(Math.max(...HOURS.map(k => vals[k])) || 1);
+  let s = `<svg class="bars" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">`;
+  for (const f of [0, 0.5, 1]) {
+    const y = pt + ih * (1 - f);
+    s += `<line class="g" x1="${pl}" x2="${w - pr}" y1="${y}" y2="${y}"/><text x="${pl - 4}" y="${y + 3.5}" text-anchor="end">${fmtShort(top * f)}</text>`;
+  }
+  HOURS.forEach((hr, k) => {
+    const v = vals[hr], bh = ih * v / top, x = pl + k * bw + 1;
+    s += `<rect class="${hr === cur ? 'cur' : 'b'}" x="${x.toFixed(1)}" y="${(pt + ih - bh).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${bh.toFixed(1)}"><title>${hr === 0 ? 24 : hr}時台 ${fmtPeople(v)}</title></rect>`;
+    if ([6, 9, 12, 15, 18, 21, 0].includes(hr)) s += `<text x="${(x + (bw - 2) / 2).toFixed(1)}" y="${h - 6}" text-anchor="middle">${hr === 0 ? 24 : hr}時</text>`;
+  });
+  return s + '</svg>';
+}
+
+let shownKey = '';
+function updatePanels(force) {
+  const h = hourOf(sim.t), day = sim.day, key = h + day + selected;
+  const mins = Math.floor(sim.t) % 1440;
+  $('clock').textContent = pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60);
+  if (!force && key === shownKey) return;
+  shownKey = key;
+  const b = BOARD[day][h];
+  $('dayTag').textContent = (day === 'wk' ? '平日 ' : '土休日 ') + (h === 0 ? 24 : h) + '時台';
+  const tot = b.reduce((a, v) => a + v, 0);
+  $('kTotal').innerHTML = `${fmtPeople(tot)}<small>JR全線分。うち山手線は推定${fmtPeople(tot * SHARE)}</small>`;
+  $('kTph').innerHTML = `${TPH[day][h]}本<small>約${(60 / TPH[day][h]).toFixed(1)}分間隔</small>`;
+
+  const s = ST[selected];
+  const mult = day === 'hol' ? HOL_MULT[s.type] : 1;
+  $('stName').textContent = s.name;
+  $('stType').textContent = TYPE_LABEL[s.type];
+  $('stMeta').innerHTML = `${TYPE_DESC[s.type]}駅。1日の乗車 <b>${fmtPeople(s.daily * mult)}</b>、いま（${h === 0 ? 24 : h}時台）は <b>${fmtPeople(b[selected])}</b>／時`;
+  $('stChart').innerHTML = barChart(BOARD[day].map(r => r[selected]), h, s.name + 'の時間帯別乗車人数');
+
+  const order = b.map((v, i) => [v, i]).sort((x, y) => y[0] - x[0]).slice(0, 6);
+  const mx = order[0][0] || 1;
+  $('rank').innerHTML = order.map(([v, i]) =>
+    `<li><button type="button" data-i="${i}">${ST[i].name}</button><span class="bar" style="width:${(v / mx * 100).toFixed(1)}%"></span><span class="v">${fmtShort(v)}人</span></li>`).join('');
+  $('lineChart').innerHTML = barChart(BOARD[day].map(r => r.reduce((a, v) => a + v, 0)), h, '30駅合計の時間帯別乗車人数');
+}
+
+function segName(tr) {
+  const i = segOf(tr.pos), j = (i + 1) % N;
+  return tr.dir === 1 ? `${ST[i].name}→${ST[j].name}` : `${ST[j].name}→${ST[i].name}`;
+}
+function updateKpis() {
+  const tr = sim.trains;
+  if (!tr.length) return;
+  const avg = tr.reduce((a, t) => a + t.load, 0) / tr.length / CAP * 100;
+  const top = tr.reduce((a, t) => t.load > a.load ? t : a, tr[0]);
+  $('kAvg').innerHTML = `${Math.round(avg)}%<small>${tr.length}本が走行中</small>`;
+  $('kMax').innerHTML = `${Math.round(top.load / CAP * 100)}%<small>${top.dir === 1 ? '内回り' : '外回り'} ${segName(top)}</small>`;
+}
+
+// ---- 操作 ----
+let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+let speed = 3, dragging = false;
+const playBtn = $('play'), slider = $('time');
+const syncPlay = () => { playBtn.textContent = playing ? '一時停止' : '再生'; };
+playBtn.addEventListener('click', () => { playing = !playing; syncPlay(); });
+$('speed').addEventListener('change', e => { speed = +e.target.value; });
+slider.addEventListener('input', () => { dragging = true; reset(+slider.value); updatePanels(true); updateKpis(); });
+slider.addEventListener('change', () => { dragging = false; });
+function setDay(d) {
+  sim.day = d;
+  $('dayWk').setAttribute('aria-pressed', d === 'wk'); $('dayHol').setAttribute('aria-pressed', d === 'hol');
+  reset(sim.t); updatePanels(true); updateKpis();
+}
+$('dayWk').addEventListener('click', () => setDay('wk'));
+$('dayHol').addEventListener('click', () => setDay('hol'));
+document.querySelectorAll('.jumps button').forEach(bt => bt.addEventListener('click', () => {
+  reset(+bt.dataset.t); slider.value = bt.dataset.t; updatePanels(true); updateKpis();
+}));
+$('rank').addEventListener('click', e => {
+  const bt = e.target.closest('button[data-i]');
+  if (bt) { selected = +bt.dataset.i; updatePanels(true); }
+});
+
+function pick(ev) {
+  const r = cv.getBoundingClientRect(), mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  let best = null, bd = 10 * SF;
+  for (const t of sim.trains) { const d = Math.hypot(t.x - mx, t.y - my); if (d < bd) { bd = d; best = t; } }
+  if (best) return { train: best, mx, my };
+  const b = BOARD[sim.day][hourOf(sim.t)];
+  let si = -1, sd = Infinity;
+  for (let i = 0; i < N; i++) {
+    const d = Math.hypot(PTS[i][0] - mx, PTS[i][1] - my);
+    if (d < Math.max(12 * SF, radiusOf(b[i])) && d < sd) { sd = d; si = i; }
+  }
+  return si >= 0 ? { station: si, mx, my } : { mx, my };
+}
+cv.addEventListener('pointermove', ev => {
+  const p = pick(ev);
+  hover = p.train || null;
+  if (p.train) {
+    const t = p.train;
+    tip.innerHTML = `${t.dir === 1 ? '内回り' : '外回り'} ${segName(t)}<br>乗っている人 約${t.load.toLocaleString()}人・混雑率 ${Math.round(t.load / CAP * 100)}%`;
+  } else if (p.station != null) {
+    const h = hourOf(sim.t);
+    tip.innerHTML = `${ST[p.station].name}<br>${h === 0 ? 24 : h}時台の乗車 ${fmtPeople(BOARD[sim.day][h][p.station])}`;
+  }
+  tip.hidden = !(p.train || p.station != null);
+  tip.style.left = Math.min(Math.max(p.mx, 90), W - 90) + 'px'; tip.style.top = p.my + 'px';
+  cv.style.cursor = p.train || p.station != null ? 'pointer' : 'crosshair';
+});
+cv.addEventListener('pointerleave', () => { tip.hidden = true; hover = null; });
+cv.addEventListener('click', ev => { const p = pick(ev); if (p.station != null) { selected = p.station; updatePanels(true); } });
+cv.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { selected = (selected + (e.key === 'ArrowRight' ? 1 : N - 1)) % N; updatePanels(true); e.preventDefault(); }
+});
+
+readTok();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTok);
+new MutationObserver(readTok).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+new ResizeObserver(resize).observe(box);
+resize();
+reset(480);
+syncPlay(); updatePanels(true); updateKpis();
+
+let last = performance.now(), kpiAt = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (playing && !dragging) {
+    let rem = dt * speed;
+    while (rem > 0) { const d = Math.min(0.2, rem); step(d); rem -= d; }
+    if (sim.t >= 1470) reset(300);
+    slider.value = Math.min(1469, Math.floor(sim.t));
+  }
+  updatePanels(false);
+  if (now - kpiAt > 300) { kpiAt = now; updateKpis(); }
+  draw(now);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
