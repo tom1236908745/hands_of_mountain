@@ -189,11 +189,13 @@ def _ear_inner(sx):
 
 
 def _tail(pen, c, t_wag=0.0):
-    pts = _qbez((780, 830), (960, 860), (905, 690), 20)
-    pts += _qbez((905, 690), (880, 610 + t_wag), (835, 650), 10)[1:]
-    pen.line(pts, c["line"], 62)
-    pen.line(pts, c["patch_a"], 62 - LW * 2)
-    pen.line(pts[-8:], c["patch_b"], 62 - LW * 2)
+    """ずんぐり太く短いしっぽ（先がくるん・先っぽだけ黒）。"""
+    pts = _qbez((790, 820), (930, 845), (905, 735), 16)
+    pts += _qbez((905, 735), (895, 690 + t_wag), (862, 712), 8)[1:]
+    w = 92
+    pen.line(pts, c["line"], w)
+    pen.line(pts, c["patch_a"], w - LW * 2)
+    pen.line(pts[-6:], c["patch_b"], w - LW * 2)
 
 
 def _body(img, pen, c):
