@@ -1,8 +1,20 @@
 # ことにゃんの古ことば帖 — YouTube 制作キット
 
-マスコット **ことにゃん** が、仏教・聖書・故事成語などの「古いことば」を紹介する動画を、
-**台本（YAML）を1枚書くだけで** 量産するための仕組みです。
-同じキャラ素材から **LINEスタンプ** と **グッズ用の高解像度画像** も書き出せます。
+仏教・聖書・故事成語などの「古いことば」を伝える動画を量産するための仕組みです。
+
+| 形式 | フォルダ | 内容 |
+|---|---|---|
+| **ショートアニメ（メイン）** | [`anime/`](anime/README.md) | セリフなし・縦型の物語アニメ。制作仕様（spec.md）→ 自動で絵・カメラ・光・字幕・音楽 |
+| 解説動画 | `episodes/` `tools/render.py` | マスコットが字幕で解説する横動画・ショート（下記） |
+| LINEスタンプ・グッズ | `stamps/` `tools/stamps.py` | マスコット「ことにゃん」のスタンプ・高解像度画像 |
+
+チャンネル方針・動画の型・ネタ帳は [`構成メモ.md`](構成メモ.md) にあります。
+
+---
+
+## 解説動画キット
+
+マスコット **ことにゃん** が字幕で「ことば」を解説する動画を、**台本（YAML）を1枚書くだけで** 作れます。
 
 ![キャラクター](character/character_sheet.png)
 
@@ -23,8 +35,8 @@
 
 ```bash
 cd youtube
-pip install -r requirements.txt     # Pillow, PyYAML
-./tools/setup_fonts.sh              # 丸ゴシック体（商用OK）をダウンロード
+pip install -r requirements.txt     # Pillow, PyYAML, numpy
+./tools/setup_fonts.sh              # 丸ゴシック体・明朝体（商用OK）をダウンロード
 # ffmpeg も必要: mac → brew install ffmpeg / Windows → winget install ffmpeg
 ```
 
@@ -67,6 +79,7 @@ scenes:
 ```
 youtube/
 ├── 構成メモ.md            チャンネル方針・動画の型・ネタ帳 ← まずここを見る
+├── anime/                 ショートアニメ制作キット（anime/README.md）
 ├── config.yaml            チャンネル名・カテゴリ色・声・フォント・BGM
 ├── character/PROFILE.md   キャラ設定（口調・色・NG）← 台本を書く前に読む
 ├── episodes/              台本（1本 = 1ファイル）
@@ -103,4 +116,4 @@ youtube/
 ## ライセンスまわり
 
 - キャラクター「ことにゃん」とこのツールの出力画像はあなたのオリジナル素材として使えます（グッズ化OK）
-- フォント M PLUS Rounded 1c は SIL Open Font License（商用利用・スタンプ利用OK）
+- フォント M PLUS Rounded 1c・しっぽり明朝 B1 は SIL Open Font License（商用利用・スタンプ利用OK）
