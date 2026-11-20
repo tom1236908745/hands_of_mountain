@@ -130,11 +130,12 @@ HEAD = (500, 415, 350, 268)      # cx, cy, rx, ry
 
 
 # ---- 形 -----------------------------------------------------------------------
-CX, CY = 500, 585            # おもちの中心
-RX, RY_TOP, RY_BOT = 345, 330, 300
-EYE_L = (392, 560)
-EYE_R = (608, 560)
-MOUTH = (500, 612)
+CX, CY = 500, 615            # おもちの中心
+RX, RY_TOP, RY_BOT = 350, 255, 270     # 上を低くして、耳と顔を近づける
+EYE_L = (390, 585)
+EYE_R = (610, 585)
+MOUTH = (500, 637)
+EAR_DY = 95                  # 耳を下げる量
 
 
 def _wobble(pts, amp=2.2, seed=0.0):
@@ -175,16 +176,16 @@ def _qbez(p0, p1, p2, n=14):
 
 def _ear_pts(sx, scale=1.0):
     X = lambda v: 500 + sx * v  # noqa: E731
-    return (_qbez((X(325), 330), (X(335), 200), (X(292), 170))
-            + _qbez((X(292), 170), (X(270), 152), (X(240), 172))
-            + _qbez((X(240), 172), (X(190), 205), (X(150), 290)))
+    return (_qbez((X(325), 330 + EAR_DY), (X(335), 200 + EAR_DY), (X(292), 170 + EAR_DY))
+            + _qbez((X(292), 170 + EAR_DY), (X(270), 152 + EAR_DY), (X(240), 172 + EAR_DY))
+            + _qbez((X(240), 172 + EAR_DY), (X(190), 205 + EAR_DY), (X(150), 290 + EAR_DY)))
 
 
 def _ear_inner(sx):
     X = lambda v: 500 + sx * v  # noqa: E731
-    return (_qbez((X(292), 310), (X(300), 222), (X(278), 205))
-            + _qbez((X(278), 205), (X(262), 194), (X(246), 210))
-            + _qbez((X(246), 210), (X(212), 240), (X(196), 300)))
+    return (_qbez((X(292), 310 + EAR_DY), (X(300), 222 + EAR_DY), (X(278), 205 + EAR_DY))
+            + _qbez((X(278), 205 + EAR_DY), (X(262), 194 + EAR_DY), (X(246), 210 + EAR_DY))
+            + _qbez((X(246), 210 + EAR_DY), (X(212), 240 + EAR_DY), (X(196), 300 + EAR_DY)))
 
 
 def _tail(pen, c, t_wag=0.0):
@@ -213,9 +214,9 @@ def _body(img, pen, c):
     lp.polygon(shape, fill=c["fur"])
     pat = Image.new("RGBA", img.size, (0, 0, 0, 0))
     pp = type(pen)(pat, pen.s)
-    pp.ellipse(255, 335, 200, 150, fill=c["patch_a"])      # 左耳から続く茶
-    pp.ellipse(735, 300, 120, 80, fill=c["patch_b"])       # 右上の黒
-    pp.ellipse(800, 760, 120, 110, fill=c["patch_a"])      # 右下の茶
+    pp.ellipse(250, 420, 200, 140, fill=c["patch_a"])      # 左耳から続く茶
+    pp.ellipse(740, 385, 120, 75, fill=c["patch_b"])       # 右上の黒
+    pp.ellipse(805, 790, 115, 100, fill=c["patch_a"])      # 右下の茶
     pat.putalpha(ImageChops.multiply(pat.getchannel("A"), layer.getchannel("A")))
     layer.alpha_composite(pat)
     img.alpha_composite(layer)
@@ -241,7 +242,7 @@ def _book(pen, c):
 def _cheeks(pen, c, strong=False):
     a = 235 if strong else 175
     for x in (318, 682):
-        pen.ellipse(x, 622, 46 if strong else 40, 24, fill=c["cheek"] + (a,))
+        pen.ellipse(x, 645, 46 if strong else 40, 24, fill=c["cheek"] + (a,))
 
 
 def _dot_eye(pen, c, center, look=(0, 0), r=(27, 35), shine=True):
@@ -306,9 +307,9 @@ def _mouth(pen, c, kind="w", open_=False):
 
 def _snot_bubble(pen, c):
     """鼻ちょうちん（すぐ寝る、のしるし）。"""
-    pen.circle(548, 600, 44, fill=c["bubble"] + (170,))
-    pen.arc(548, 600, 44, 44, 0, 360, c["line"] + (160,), 5)
-    pen.circle(534, 585, 9, fill=(255, 255, 255, 220))
+    pen.circle(548, 625, 44, fill=c["bubble"] + (170,))
+    pen.arc(548, 625, 44, 44, 0, 360, c["line"] + (160,), 5)
+    pen.circle(534, 610, 9, fill=(255, 255, 255, 220))
 
 
 def _sweat(pen, c, x, y, r=22):
@@ -318,13 +319,13 @@ def _sweat(pen, c, x, y, r=22):
 
 def _question(pen, c):
     col = c["line"]
-    pen.arc(865, 190, 48, 48, 180, 400, col, 20)
-    pen.line([(902, 222), (865, 262), (865, 290)], col, 20)
-    pen.circle(865, 335, 13, fill=col)
+    pen.arc(905, 230, 44, 44, 180, 400, col, 18)
+    pen.line([(939, 259), (905, 296), (905, 322)], col, 18)
+    pen.circle(905, 362, 12, fill=col)
 
 
 def _anger_mark(pen, c):
-    x, y = 820, 230
+    x, y = 880, 300
     col = c["anger"]
     for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
         pen.arc(x + dx * 36, y + dy * 36, 26, 26,
@@ -334,7 +335,7 @@ def _anger_mark(pen, c):
 
 def _zzz(pen, c):
     col = c["line"]
-    for i, (x, y, s) in enumerate(((800, 260, 40), (870, 180, 30), (920, 115, 22))):
+    for i, (x, y, s) in enumerate(((860, 330, 34), (915, 250, 26), (955, 190, 19))):
         pen.line([(x - s, y - s), (x + s, y - s), (x - s, y + s), (x + s, y + s)], col, 11)
 
 
@@ -438,27 +439,27 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
 
     # --- 効果 ---
     if e == "sad":
-        _sweat(pen, c, EYE_L[0] - 30, 640, 18)
+        _sweat(pen, c, EYE_L[0] - 30, 665, 18)
     elif e == "angry":
         _anger_mark(pen, c)
         for x in (300, 700):                      # ぷくっとふくらんだほっぺ
-            pen.ellipse(x, 622, 50, 32, fill=c["cheek"] + (230,))
+            pen.ellipse(x, 645, 50, 32, fill=c["cheek"] + (230,))
     elif e == "thinking":
         _question(pen, c)
     elif e == "sleepy":
         _snot_bubble(pen, c)
         _zzz(pen, c)
     elif e == "shy":
-        _sweat(pen, c, 800, 380, 22)
+        _sweat(pen, c, 805, 460, 22)
         for x in (296, 336, 662, 702):            # 赤面の斜線
-            pen.line([(x, 636), (x + 16, 612)], c["anger"], 6)
+            pen.line([(x, 659), (x + 16, 635)], c["anger"], 6)
     elif e in ("happy", "wink"):
         _sparkles(pen, c, [(130, 300, 38), (880, 360, 30)])
     elif e == "satori":
         _sparkles(pen, c, [(120, 220, 34), (890, 250, 42), (110, 780, 26)])
     elif e == "blank":
         for x in (380, 620):                       # 縦線（スン…）
-            pen.line([(x, 420), (x, 470)], c["line"] + (120,), 5)
+            pen.line([(x, 470), (x, 515)], c["line"] + (120,), 5)
 
     return img.resize((size, size), Image.LANCZOS)
 
