@@ -19,8 +19,9 @@ PALETTE = {
     "patch_a": (238, 150, 64),    # 三毛の茶
     "patch_b": (72, 58, 52),      # 三毛の黒
     "ear_in": (250, 184, 184),    # 耳の内側
-    "line": (76, 56, 50),         # 輪郭線
-    "eye": (52, 40, 36),
+    "line": (112, 80, 68),        # 輪郭線（やわらかい茶）
+    "eye": (58, 40, 36),
+    "iris": (128, 84, 60),        # 瞳の下のほうの明るい茶
     "nose": (240, 130, 140),
     "mouth_in": (200, 80, 90),
     "cheek": (250, 160, 160),
@@ -35,7 +36,7 @@ PALETTE = {
 
 SS = 4          # スーパーサンプリング倍率
 BASE = 1000     # 設計キャンバスのサイズ
-LW = 13         # 輪郭線の太さ
+LW = 11         # 輪郭線の太さ
 
 EXPRESSIONS = [
     "normal", "happy", "surprised", "thinking", "sad",
@@ -120,29 +121,41 @@ class _Pen:
 
 
 # ---- パーツ -------------------------------------------------------------------
-EYE_L = (385, 445)
-EYE_R = (615, 445)
-HEAD = (500, 420, 330, 255)      # cx, cy, rx, ry
+# 赤ちゃんっぽく見えるように：頭は大きく横長、目は低め・はなれ気味・大きく
+EYE_L = (368, 468)
+EYE_R = (632, 468)
+HEAD = (500, 415, 350, 268)      # cx, cy, rx, ry
 
 
 def _tail(pen, c):
     # 体の後ろから右上へ伸びるしっぽ（輪郭→茶→先っぽ黒）
     # 2次ベジェ曲線：体の右下（体に隠れる）→ 右へふくらんで → 上へ
-    p0, p1, p2 = (600, 880), (990, 900), (880, 450)
+    p0, p1, p2 = (590, 890), (930, 920), (850, 560)
     pts = []
     for i in range(41):
         t = i / 40
         pts.append(((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
                     (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]))
-    pen.line(pts, c["line"], 82)
-    pen.line(pts, c["patch_a"], 82 - LW * 2)
-    pen.line(pts[-8:], c["patch_b"], 82 - LW * 2)
+    pen.line(pts, c["line"], 76)
+    pen.line(pts, c["patch_a"], 76 - LW * 2)
+    pen.line(pts[-8:], c["patch_b"], 76 - LW * 2)
+
+
+def _qbez(p0, p1, p2, n=14):
+    return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+             (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]) for t in (i / n for i in range(n + 1))]
 
 
 def _ear(pen, c, side):
+    """先が丸い三角の耳。"""
     sx = -1 if side == "L" else 1
-    outer = [(500 + sx * 300, 330), (500 + sx * 285, 95), (500 + sx * 120, 200)]
-    inner = [(500 + sx * 268, 285), (500 + sx * 268, 150), (500 + sx * 165, 215)]
+    X = lambda v: 500 + sx * v  # noqa: E731
+    outer = (_qbez((X(330), 360), (X(330), 150), (X(262), 118))
+             + _qbez((X(262), 118), (X(235), 100), (X(200), 128))
+             + _qbez((X(200), 128), (X(150), 170), (X(110), 230)))
+    inner = (_qbez((X(292), 320), (X(295), 185), (X(258), 162))
+             + _qbez((X(258), 162), (X(232), 150), (X(208), 175))
+             + _qbez((X(208), 175), (X(175), 210), (X(160), 250)))
     fill = c["patch_a"] if side == "L" else c["patch_b"]
     pen.polygon(outer, fill=fill, outline=c["line"], width=LW)
     pen.polygon(inner, fill=c["ear_in"])
@@ -169,57 +182,62 @@ def _head(img, pen, c):
 def _body(img, pen, c):
     _tail(pen, c)
     # 胴体（座った姿勢）
-    pen.ellipse(500, 735, 255, 215, fill=c["fur"], outline=c["line"], width=LW)
-    pen.ellipse(330, 720, 70, 95, fill=c["patch_a"])     # 体の茶ぶち
-    pen.ellipse(500, 735, 255, 215, outline=c["line"], width=LW)
-    # 前足
-    for x in (420, 580):
-        pen.ellipse(x, 905, 68, 52, fill=c["fur"], outline=c["line"], width=LW)
-        for dx in (-18, 18):
-            pen.line([(x + dx, 878), (x + dx, 900)], c["line"], 8)
+    pen.ellipse(500, 765, 225, 190, fill=c["fur"], outline=c["line"], width=LW)
+    pen.ellipse(355, 760, 62, 82, fill=c["patch_a"])     # 体の茶ぶち
+    pen.ellipse(500, 765, 225, 190, outline=c["line"], width=LW)
+    # 前足（ころんと丸く）
+    for x in (428, 572):
+        pen.ellipse(x, 915, 62, 46, fill=c["fur"], outline=c["line"], width=LW)
+        for dx in (-16, 16):
+            pen.line([(x + dx, 893), (x + dx, 908)], c["line"], 7)
     _ear(pen, c, "L")
     _ear(pen, c, "R")
     _head(img, pen, c)
 
 
 def _collar(pen, c, with_bell=True):
-    pen.arc(500, 560, 215, 105, 30, 150, c["line"], 46)
-    pen.arc(500, 560, 215, 105, 32, 148, c["collar"], 30)
+    pen.arc(500, 590, 200, 92, 32, 148, c["line"], 42)
+    pen.arc(500, 590, 200, 92, 34, 146, c["collar"], 27)
     if with_bell:
-        pen.circle(500, 690, 40, fill=c["bell"], outline=c["line"], width=9)
-        pen.line([(465, 684), (535, 684)], c["bell_dark"], 7)
-        pen.circle(500, 705, 8, fill=c["bell_dark"])
-        pen.line([(500, 708), (500, 728)], c["bell_dark"], 6)
-        pen.circle(486, 672, 9, fill=(255, 255, 255, 220))
+        bx, by = 500, 712
+        pen.circle(bx, by, 34, fill=c["bell"], outline=c["line"], width=8)
+        pen.line([(bx - 30, by - 5), (bx + 30, by - 5)], c["bell_dark"], 6)
+        pen.circle(bx, by + 12, 7, fill=c["bell_dark"])
+        pen.line([(bx, by + 14), (bx, by + 30)], c["bell_dark"], 5)
+        pen.circle(bx - 12, by - 16, 8, fill=(255, 255, 255, 230))
 
 
 def _whiskers(pen, c):
     for side in (-1, 1):
-        for dy, ang in ((-12, -10), (14, 4)):
-            x0 = 500 + side * 205
-            pen.line([(x0, 530 + dy), (x0 + side * 105, 530 + dy + ang)], c["line"], 7)
+        for dy, ang in ((-10, -8), (12, 5)):
+            x0 = 500 + side * 250
+            pen.line([(x0, 560 + dy), (x0 + side * 80, 560 + dy + ang)], c["line"] + (150,), 6)
 
 
 def _cheeks(pen, c, strong=False):
-    a = 235 if strong else 160
-    for x in (300, 700):
-        pen.ellipse(x, 525, 50 if strong else 44, 27, fill=c["cheek"] + (a,))
+    a = 230 if strong else 170
+    for x in (285, 715):
+        pen.ellipse(x, 560, 56 if strong else 50, 30, fill=c["cheek"] + (a,))
 
 
-def _eye_open(pen, c, center, look=(0, 0), r=(40, 50)):
+def _eye_open(pen, c, center, look=(0, 0), r=(58, 68)):
+    """うるうるの大きな目：黒目＋下のほうに明るい茶＋大小のハイライト。"""
     cx, cy = center[0] + look[0], center[1] + look[1]
     pen.ellipse(cx, cy, r[0], r[1], fill=c["eye"])
-    pen.circle(cx - r[0] * 0.3, cy - r[1] * 0.35, r[0] * 0.38, fill=(255, 255, 255))
-    pen.circle(cx + r[0] * 0.35, cy + r[1] * 0.35, r[0] * 0.16, fill=(255, 255, 255))
+    pen.ellipse(cx, cy + r[1] * 0.42, r[0] * 0.7, r[1] * 0.38, fill=c["iris"] + (170,))
+    pen.ellipse(cx - r[0] * 0.28, cy - r[1] * 0.32, r[0] * 0.4, r[1] * 0.36, fill=(255, 255, 255))
+    pen.circle(cx + r[0] * 0.38, cy + r[1] * 0.3, r[0] * 0.17, fill=(255, 255, 255))
+    pen.circle(cx + r[0] * 0.1, cy - r[1] * 0.6, r[0] * 0.08, fill=(255, 255, 255, 200))
 
 
 def _eye_surprised(pen, c, center):
-    pen.circle(center[0], center[1], 52, fill=c["eye_white"], outline=c["eye"], width=10)
-    pen.circle(center[0], center[1], 18, fill=c["eye"])
+    pen.circle(center[0], center[1], 56, fill=c["eye_white"], outline=c["eye"], width=10)
+    pen.circle(center[0], center[1], 20, fill=c["eye"])
+    pen.circle(center[0] - 6, center[1] - 7, 6, fill=(255, 255, 255))
 
 
 def _eye_happy(pen, c, center):     # ∩
-    pen.arc(center[0], center[1] + 22, 44, 38, 200, 340, c["eye"], 16)
+    pen.arc(center[0], center[1] + 22, 46, 38, 200, 340, c["eye"], 16)
 
 
 def _eye_calm(pen, c, center):      # ∪
@@ -227,19 +245,20 @@ def _eye_calm(pen, c, center):      # ∪
 
 
 def _eye_line(pen, c, center):      # ー
-    pen.line([(center[0] - 42, center[1] + 5), (center[0] + 42, center[1] + 5)], c["eye"], 14)
+    pen.arc(center[0], center[1] - 8, 44, 22, 25, 155, c["eye"], 14)
 
 
 def _mouth(pen, c, open_=False, wide=False):
     # 鼻
-    pen.polygon([(478, 497), (522, 497), (500, 520)], fill=c["nose"], outline=c["line"], width=5)
+    pen.ellipse(500, 530, 17, 11, fill=c["nose"])
+    pen.line([(500, 538), (500, 552)], c["line"], 6)
     if open_:
-        h = 52 if wide else 36
-        pen.ellipse(500, 548 + h / 3, 30 if not wide else 26, h / 2 + 6, fill=c["mouth_in"],
-                    outline=c["line"], width=7)
+        h = 44 if wide else 30
+        pen.ellipse(500, 566 + h / 3, 24 if not wide else 21, h / 2 + 5, fill=c["mouth_in"],
+                    outline=c["line"], width=6)
     # ω
-    pen.arc(477, 530, 23, 18, 10, 170, c["line"], 8)
-    pen.arc(523, 530, 23, 18, 10, 170, c["line"], 8)
+    pen.arc(482, 552, 18, 14, 10, 170, c["line"], 7)
+    pen.arc(518, 552, 18, 14, 10, 170, c["line"], 7)
 
 
 def _brows(pen, c, kind):
@@ -249,14 +268,14 @@ def _brows(pen, c, kind):
         pen.arc(lx, 370, 45, 20, 200, 340, c["line"], w)
         pen.arc(rx, 370, 45, 20, 200, 340, c["line"], w)
     elif kind == "sad":
-        pen.line([(lx - 45, 380), (lx + 40, 360)], c["line"], w)
-        pen.line([(rx + 45, 380), (rx - 40, 360)], c["line"], w)
+        pen.line([(lx - 45, 408), (lx + 40, 388)], c["line"], w)
+        pen.line([(rx + 45, 408), (rx - 40, 388)], c["line"], w)
     elif kind == "angry":
-        pen.line([(lx - 45, 355), (lx + 45, 385)], c["line"], w)
-        pen.line([(rx + 45, 355), (rx - 45, 385)], c["line"], w)
+        pen.line([(lx - 45, 383), (lx + 45, 413)], c["line"], w)
+        pen.line([(rx + 45, 383), (rx - 45, 413)], c["line"], w)
     elif kind == "think":
-        pen.line([(lx - 40, 370), (lx + 40, 365)], c["line"], w)
-        pen.line([(rx - 40, 352), (rx + 45, 372)], c["line"], w)
+        pen.line([(lx - 40, 398), (lx + 40, 365)], c["line"], w)
+        pen.line([(rx - 40, 380), (rx + 45, 400)], c["line"], w)
 
 
 def _sweat(pen, c, x, y, r=22):
@@ -346,11 +365,11 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
         _eye_surprised(pen, c, EYE_L)
         _eye_surprised(pen, c, EYE_R)
     elif e == "thinking":
-        _eye_open(pen, c, EYE_L, (14, -14), (36, 44))
-        _eye_open(pen, c, EYE_R, (14, -14), (36, 44))
+        _eye_open(pen, c, EYE_L, (14, -14), (50, 60))
+        _eye_open(pen, c, EYE_R, (14, -14), (50, 60))
     elif e == "sad":
-        _eye_open(pen, c, EYE_L, (0, 10), (36, 44))
-        _eye_open(pen, c, EYE_R, (0, 10), (36, 44))
+        _eye_open(pen, c, EYE_L, (0, 10), (50, 60))
+        _eye_open(pen, c, EYE_R, (0, 10), (50, 60))
     elif e == "wink":
         _eye_open(pen, c, EYE_L)
         _eye_happy(pen, c, EYE_R)
@@ -358,8 +377,8 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
         _eye_calm(pen, c, EYE_L)
         _eye_calm(pen, c, EYE_R)
     elif e == "shy":
-        _eye_open(pen, c, EYE_L, (-14, 8), (36, 44))
-        _eye_open(pen, c, EYE_R, (-14, 8), (36, 44))
+        _eye_open(pen, c, EYE_L, (-14, 8), (50, 60))
+        _eye_open(pen, c, EYE_R, (-14, 8), (50, 60))
 
     # --- 口・ほっぺ・ひげ・眉・効果 ---
     _cheeks(pen, c, strong=(e in ("shy", "happy")))
@@ -370,7 +389,7 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
         _brows(pen, c, "up")
     elif e == "sad":
         _brows(pen, c, "sad")
-        _sweat(pen, c, EYE_L[0] - 30, 540, 20)   # 涙
+        _sweat(pen, c, EYE_L[0] - 34, 590, 20)   # 涙
     elif e == "angry":
         _brows(pen, c, "angry")
         _anger_mark(pen, c)
@@ -381,8 +400,8 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
         _zzz(pen, c)
     elif e == "shy":
         _sweat(pen, c, 820, 330, 24)
-        for x in (270, 315, 685, 730):            # 赤面の斜線
-            pen.line([(x, 535), (x + 20, 510)], c["anger"], 7)
+        for x in (258, 300, 692, 734):            # 赤面の斜線
+            pen.line([(x, 572), (x + 18, 548)], c["anger"], 6)
     elif e in ("happy", "wink"):
         _sparkles(pen, c, [(110, 230, 40), (900, 330, 32)])
     elif e == "satori":
