@@ -135,7 +135,6 @@ RX, RY_TOP, RY_BOT = 350, 255, 270     # 上を低くして、耳と顔を近づ
 EYE_L = (390, 585)
 EYE_R = (610, 585)
 MOUTH = (500, 637)
-EAR_DY = 95                  # 耳を下げる量
 
 
 def _wobble(pts, amp=2.2, seed=0.0):
@@ -174,18 +173,19 @@ def _qbez(p0, p1, p2, n=14):
              (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]) for t in (i / n for i in range(n + 1))]
 
 
-def _ear_pts(sx, scale=1.0):
+def _ear_pts(sx):
+    """耳の外形。付け根は頭の輪郭より内側まで伸ばし、体で隠す（すき間ができないように）。"""
     X = lambda v: 500 + sx * v  # noqa: E731
-    return (_qbez((X(325), 330 + EAR_DY), (X(335), 200 + EAR_DY), (X(292), 170 + EAR_DY))
-            + _qbez((X(292), 170 + EAR_DY), (X(270), 152 + EAR_DY), (X(240), 172 + EAR_DY))
-            + _qbez((X(240), 172 + EAR_DY), (X(190), 205 + EAR_DY), (X(150), 290 + EAR_DY)))
+    return (_qbez((X(322), 560), (X(338), 300), (X(292), 265))
+            + _qbez((X(292), 265), (X(270), 247), (X(240), 267))
+            + _qbez((X(240), 267), (X(190), 300), (X(130), 440)))
 
 
 def _ear_inner(sx):
     X = lambda v: 500 + sx * v  # noqa: E731
-    return (_qbez((X(292), 310 + EAR_DY), (X(300), 222 + EAR_DY), (X(278), 205 + EAR_DY))
-            + _qbez((X(278), 205 + EAR_DY), (X(262), 194 + EAR_DY), (X(246), 210 + EAR_DY))
-            + _qbez((X(246), 210 + EAR_DY), (X(212), 240 + EAR_DY), (X(196), 300 + EAR_DY)))
+    return (_qbez((X(292), 470), (X(300), 317), (X(278), 300))
+            + _qbez((X(278), 300), (X(262), 289), (X(246), 305))
+            + _qbez((X(246), 305), (X(212), 335), (X(185), 430)))
 
 
 def _tail(pen, c, t_wag=0.0):
