@@ -1,0 +1,58 @@
+# チャンネル全体の設定（ここを変えると全動画に反映されます）
+
+channel:
+  name: "ちえふくの古ことば帖"
+  character_name: "ちえふく"
+  # 動画の最後に出す一言・概要欄の末尾に入る文
+  outro: "チャンネル登録で、ちえふくと一緒に古いことばを集めよう！"
+  hashtags: ["#ちえふく", "#ことわざ", "#仏教", "#聖書", "#故事成語", "#雑学"]
+
+video:
+  fps: 30
+  # 1行あたりの最低表示秒数（音声がない／短いとき）
+  min_line_seconds: 2.2
+  # 音声なしのとき 1文字あたりの秒数（読み上げ速度の目安）
+  seconds_per_char: 0.13
+  # 行と行の間（秒）
+  gap_seconds: 0.25
+  # 口パクの切り替え間隔（秒）
+  mouth_interval: 0.12
+
+# カテゴリごとの色とラベル。エピソードの category に使う
+categories:
+  buddhism:  { label: "仏教のことば",   color: [176, 92, 40],  bg_top: [252, 244, 228], bg_bottom: [240, 222, 190] }
+  christian: { label: "聖書のことば",   color: [58, 92, 160],  bg_top: [240, 245, 252], bg_bottom: [208, 222, 242] }
+  kotowaza:  { label: "故事・ことわざ", color: [60, 120, 80],  bg_top: [242, 249, 240], bg_bottom: [210, 232, 206] }
+  other:     { label: "世界の古ことば", color: [120, 70, 140], bg_top: [248, 242, 250], bg_bottom: [226, 212, 236] }
+
+fonts:
+  # 上から順に探して、最初に見つかったものを使う
+  bold:
+    - assets/fonts/MPLUSRounded1c-ExtraBold.ttf
+    - /System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc
+    - C:/Windows/Fonts/meiryob.ttc
+    - /usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc
+    - /usr/share/fonts/truetype/fonts-japanese-gothic.ttf
+  regular:
+    - assets/fonts/MPLUSRounded1c-Bold.ttf
+    - /System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc
+    - C:/Windows/Fonts/meiryo.ttc
+    - /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+    - /usr/share/fonts/truetype/fonts-japanese-gothic.ttf
+
+# 音声合成（VOICEVOX）。エンジンが起動していなければ自動で「音声なし」になる
+voice:
+  engine: voicevox
+  url: "http://127.0.0.1:50021"
+  # 話者ID（VOICEVOX の /speakers で確認）。例: 3=ずんだもん(ノーマル) 8=春日部つむぎ 2=四国めたん
+  speakers:
+    chiefuku: 8
+    narration: 13
+  speed: 1.1
+  # クレジット表記（VOICEVOXは利用規約でクレジット必須）。概要欄に自動で入る
+  credit: "VOICEVOX:春日部つむぎ / VOICEVOX:青山龍星"
+
+# BGM（任意）。assets/bgm/ に置いたファイル名。空なら無し
+bgm:
+  file: ""
+  volume: 0.12

@@ -1,0 +1,67 @@
+# ───────────────────────────────────────────────
+#  エピソード台本テンプレート
+#  コピーして「番号_ローマ字.yaml」で保存 → python tools/render.py episodes/そのファイル.yaml
+# ───────────────────────────────────────────────
+id: "000"
+title: "【〇〇】タイトル（YouTubeのタイトルになる）"   # 40字くらいまで
+category: buddhism          # buddhism / christian / kotowaza / other（config.yaml で追加可）
+term: 用語                   # 紹介することば（画面に大きく出る）
+reading: ようご               # 読みがな
+source: "出典（経典・聖書の章節・古典の書名）"
+summary: "ひとことで言うと何か（まとめ画面と概要欄に出る）"
+tags: [関連ワード1, 関連ワード2]   # YouTubeのタグ（用語・カテゴリは自動で入る）
+references:                 # 概要欄に載せる参考文献（ファクトチェックした資料）
+  - "書名・URL など"
+thumbnail:
+  catch: "サムネの\n大きな文字"   # \n で改行。2〜3行・各6〜8字が目安
+  expression: surprised        # サムネで使う表情
+
+# ── 構成 ──
+# type: title   … オープニング（用語を大きく表示）
+# type: talk    … 解説（heading=見出し帯 / board=ボードに出す文字 / note=右下の小さい注記 / image=画像パス）
+# type: quote   … 原文の引用（board の文字が「」付きで表示）
+# type: ending  … まとめ（用語＋summary を表示）
+# 各シーン共通: chapter=概要欄チャプター名（省略時は heading）/ shorts: false でショート版から除外
+#
+# lines の各行:
+#   text: 字幕（1行40字くらいまで）
+#   say: 読み上げ用のふりがな（読み間違えるときだけ）
+#   expression: normal happy surprised thinking sad angry wink sleepy satori shy
+#   speaker: chiefuku（既定） / narration
+#   pause: 1.0   … 行のあとに余分に間をあける（秒）
+
+scenes:
+  - type: title
+    lines:
+      - { expression: happy, text: "こんにちは、ちえふくだよ！" }
+      - { expression: normal, text: "今日のことばは「用語」！" }
+
+  - type: talk
+    heading: "どんな意味？"
+    board: "ボードに出す\n短い要点"
+    lines:
+      - { text: "…" }
+
+  - type: quote
+    heading: "原文を見てみよう"
+    board: "原文"
+    note: "出典"
+    lines:
+      - { text: "…" }
+
+  - type: talk
+    heading: "よくある誤解"
+    board: "×誤解\n○本当の意味"
+    lines:
+      - { expression: thinking, text: "…" }
+
+  - type: talk
+    heading: "今の暮らしで使うなら"
+    board: "使い方の例"
+    lines:
+      - { text: "…" }
+
+  - type: ending
+    lines:
+      - { expression: satori, text: "まとめ…" }
+      - { expression: happy, text: "また次回も、古いことばを一緒に集めようね！" }

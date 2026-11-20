@@ -1,0 +1,63 @@
+id: "003"
+title: "【故事成語】「塞翁が馬」幸せと不幸はどっちに転ぶ？"
+category: kotowaza
+term: 塞翁が馬
+reading: さいおうがうま
+source: "中国・前漢の書『淮南子』人間訓"
+summary: "幸運も不運も、どちらに転ぶかは予想できない"
+tags: [故事成語, ことわざ, 淮南子, 人間万事塞翁が馬, 中国古典]
+references:
+  - "『淮南子』人間訓"
+thumbnail:
+  catch: "不幸が\n幸せに\n変わる話"
+  expression: surprised
+
+scenes:
+  - type: title
+    lines:
+      - { expression: happy, text: "こんにちは、ちえふくだよ！" }
+      - { text: "今日は故事成語「塞翁が馬」！", say: "今日は故事成語、さいおうがうま！" }
+      - { text: "中国の古い本『淮南子』にあるお話なんだ。", say: "中国の古い本、えなんじにあるお話なんだ。" }
+
+  - type: talk
+    heading: "① 馬が逃げた"
+    board: "国境の老人の馬が\nとなりの国へ逃げた"
+    chapter: "塞翁が馬のお話"
+    lines:
+      - { text: "むかし、国境のとりでの近くに住むおじいさんがいたよ。" }
+      - { expression: sad, text: "ある日、大事な馬が、となりの国へ逃げてしまったんだ。" }
+      - { text: "でもおじいさんは「これが幸せのもとになるかも」と言ったんだって。" }
+
+  - type: talk
+    heading: "② 名馬を連れて帰ってきた"
+    board: "逃げた馬が\n名馬を連れて戻る"
+    lines:
+      - { expression: surprised, text: "数か月後、その馬が立派な馬を連れて帰ってきた！" }
+      - { text: "それでもおじいさんは「災いのもとになるかも」と言ったよ。" }
+
+  - type: talk
+    heading: "③ 息子がけが"
+    board: "息子が落馬して\n足の骨を折る"
+    lines:
+      - { expression: sad, text: "その馬に乗った息子が落ちて、足の骨を折ってしまったんだ。" }
+      - { text: "おじいさんは、また「幸せのもとになるかも」と言ったよ。" }
+
+  - type: talk
+    heading: "④ 戦争が起きて…"
+    board: "戦に行かずにすみ\n命が助かった"
+    lines:
+      - { text: "やがて戦が起きて、若者の多くが命を落としたんだ。" }
+      - { expression: surprised, text: "でも息子はけがのおかげで戦に行かず、無事だったんだって！" }
+
+  - type: talk
+    heading: "今の使い方"
+    board: "人間万事\n塞翁が馬"
+    note: "にんげんばんじ さいおうがうま"
+    lines:
+      - { text: "「人間万事塞翁が馬」という形でもよく使われるね。", say: "にんげんばんじ、さいおうがうま、という形でもよく使われるね。" }
+      - { expression: thinking, text: "いいこと・わるいことで、いちいち一喜一憂しなくていいってこと。" }
+
+  - type: ending
+    lines:
+      - { expression: satori, text: "今の不運が、明日の幸運につながるかもしれないね。" }
+      - { expression: happy, text: "また次回も、古いことばを一緒に集めようね！" }

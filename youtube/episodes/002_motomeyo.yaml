@@ -1,0 +1,47 @@
+id: "002"
+title: "【聖書】「求めよ、さらば与えられん」本当は何を求めるの？"
+category: christian
+term: 求めよ、さらば与えられん
+reading: もとめよ、さらばあたえられん
+source: "新約聖書『マタイによる福音書』7章7節"
+summary: "求め続ける者には、必ず道がひらかれる"
+tags: [聖書, イエス, 山上の説教, マタイによる福音書, 名言]
+references:
+  - "新約聖書 マタイによる福音書 7章7〜11節／ルカによる福音書 11章9〜13節"
+thumbnail:
+  catch: "求めれば\n何でも\nもらえる？"
+  expression: thinking
+
+scenes:
+  - type: title
+    lines:
+      - { expression: happy, text: "こんにちは、ちえふくだよ！" }
+      - { text: "今日は聖書のことば「求めよ、さらば与えられん」！", say: "今日は聖書のことば、もとめよ、さらばあたえられん！" }
+
+  - type: quote
+    heading: "原文を見てみよう"
+    board: "求めよ、さらば与へられん。\n尋ねよ、さらば見出さん。\n門を叩け、さらば開かれん。"
+    note: "マタイによる福音書 7:7（文語訳）"
+    lines:
+      - { text: "イエスが山の上で語った「山上の説教」の一節なんだ。", say: "イエスが山の上で語った、さんじょうのせっきょうの一節なんだ。" }
+      - { text: "求める・探す・門をたたく、と3回くり返しているよ。" }
+
+  - type: talk
+    heading: "何を求めるの？"
+    board: "神さまに\n祈り求めること"
+    lines:
+      - { expression: thinking, text: "じつはこれ、もともとは「祈り」についての話なんだ。" }
+      - { text: "続きには「天の父は、求める者に良いものをくださる」とあるよ。" }
+      - { expression: normal, text: "親が子どもに、石ではなくパンをあげるように、ってたとえ付き。" }
+
+  - type: talk
+    heading: "日本での使われ方"
+    board: "自分から動けば\nチャンスはつかめる"
+    lines:
+      - { text: "日本では「積極的に動けば結果がついてくる」という意味でよく使われるね。" }
+      - { expression: wink, text: "待っているだけじゃ、門は開かないってことだ！" }
+
+  - type: ending
+    lines:
+      - { expression: satori, text: "あきらめずに求め続けること。それが大切なんだね。" }
+      - { expression: happy, text: "また次回も、古いことばを一緒に集めようね！" }

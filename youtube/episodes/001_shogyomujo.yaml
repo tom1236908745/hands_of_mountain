@@ -1,0 +1,58 @@
+id: "001"
+title: "【仏教】「諸行無常」は悲しい言葉じゃない？ちえふくと1分で学ぶ"
+category: buddhism
+term: 諸行無常
+reading: しょぎょうむじょう
+source: "仏教の根本思想「三法印」のひとつ／『平家物語』冒頭"
+summary: "この世のものはすべて移り変わり、同じままではいられない"
+tags: [三法印, 平家物語, 祇園精舎, 無常, 仏教用語]
+references:
+  - "中村元『佛教語大辞典』東京書籍"
+  - "『平家物語』巻第一「祇園精舎」"
+thumbnail:
+  catch: "変わらない\nものは\nない！？"
+  expression: surprised
+
+scenes:
+  - type: title
+    lines:
+      - { expression: happy, text: "こんにちは！古いことばを集めるフクロウ、ちえふくだよ！" }
+      - { expression: normal, text: "今日のことばは「諸行無常」！", say: "今日のことばは、しょぎょうむじょう！" }
+      - { expression: wink, text: "どこかで聞いたことがあるよね？" }
+
+  - type: talk
+    heading: "どんな意味？"
+    board: "すべてのものは\n移り変わる"
+    lines:
+      - { text: "「諸行」は、この世のあらゆるもの。", say: "しょぎょうは、この世のあらゆるもの。" }
+      - { text: "「無常」は、常に同じではない、という意味だよ。", say: "むじょうは、常に同じではない、という意味だよ。" }
+      - { expression: thinking, text: "つまり、変わらないものは何ひとつない、ってこと。" }
+
+  - type: talk
+    heading: "仏教の大事な考え「三法印」"
+    board: "諸行無常\n諸法無我\n涅槃寂静"
+    note: "三法印（さんぼういん）"
+    lines:
+      - { text: "諸行無常は、仏教の大切な教え「三法印」のひとつなんだ。", say: "しょぎょうむじょうは、仏教の大切な教え、さんぼういんの、ひとつなんだ。" }
+      - { text: "仏教かどうかを見分ける「しるし」とも言われているよ。" }
+
+  - type: quote
+    heading: "有名な一節"
+    board: "祇園精舎の鐘の声\n諸行無常の響きあり"
+    note: "『平家物語』冒頭"
+    lines:
+      - { text: "いちばん有名なのは『平家物語』の書き出しだね。", say: "いちばん有名なのは、へいけものがたりの書き出しだね。" }
+      - { expression: sad, text: "栄えた平家もやがて滅びる…という、少しさみしい響きだよ。", say: "栄えた平家もやがて滅びる、という、少しさみしい響きだよ。" }
+
+  - type: talk
+    heading: "じつは希望のことば"
+    board: "つらい今も\nずっとは続かない"
+    lines:
+      - { expression: surprised, text: "でもね、変わるのは「いいもの」だけじゃないんだ。" }
+      - { expression: normal, text: "つらいことや悩みも、ずっと同じままではいられない。" }
+      - { expression: happy, text: "そう思うと、ちょっと前を向ける気がしない？" }
+
+  - type: ending
+    lines:
+      - { expression: satori, text: "諸行無常。変わるからこそ、今この時を大切に。", say: "しょぎょうむじょう。変わるからこそ、今この時を大切に。", pause: 0.6 }
+      - { expression: happy, text: "また次回も、古いことばを一緒に集めようね！" }

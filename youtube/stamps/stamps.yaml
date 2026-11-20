@@ -1,0 +1,23 @@
+# LINEスタンプの一覧。python tools/stamps.py で LINE Creators Market 用の画像一式を出力
+# 個数は 8 / 16 / 24 / 32 / 40 のどれか（LINE の規定）
+# text_pos: top / bottom（省略時 top）  color: 文字色 [R,G,B]（省略時カテゴリ色っぽい茶）
+main: { expression: happy }          # メイン画像（ストア表示用 240x240）
+tab: { expression: normal }          # トークルームタブ（96x74）
+
+stamps:
+  - { expression: happy,     text: "ありがとう" }
+  - { expression: normal,    text: "おはよう" }
+  - { expression: wink,      text: "了解！" }
+  - { expression: happy,     text: "おつかれさま" }
+  - { expression: surprised, text: "なんと！" }
+  - { expression: thinking,  text: "はて？" }
+  - { expression: sad,       text: "しょんぼり" }
+  - { expression: angry,     text: "ぷんすか" }
+  - { expression: sleepy,    text: "おやすみ" }
+  - { expression: shy,       text: "てれる…" }
+  - { expression: satori,    text: "ありがたや〜", color: [196, 130, 20] }
+  - { expression: satori,    text: "諸行無常…", color: [176, 92, 40] }
+  - { expression: wink,      text: "塞翁が馬！\nドンマイ", color: [60, 120, 80] }
+  - { expression: surprised, text: "目から鱗！", color: [58, 92, 160] }
+  - { expression: thinking,  text: "急がば回れ", color: [60, 120, 80] }
+  - { expression: happy,     text: "求めよ\nさらば与えられん", color: [58, 92, 160] }
