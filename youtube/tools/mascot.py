@@ -1,54 +1,45 @@
-"""ちえふく（マスコットキャラ）の描画モジュール。
+"""マスコットキャラ（三毛猫の「ことにゃん」）の描画モジュール。
 
 外部の画像素材を使わず、Pillow の図形だけで描くので
-・どんなサイズでもくっきり出力できる（動画/LINEスタンプ/グッズ用の高解像度）
-・表情を足したいときはこのファイルに関数を1つ足すだけ
+・どんなサイズでもくっきり出力できる（動画 / LINEスタンプ / グッズ用の高解像度）
+・表情を足したいときはこのファイルに分岐を足すだけ
 という作りになっています。
 
 座標はすべて 1000x1000 の「設計キャンバス」上の値で書き、
-最後に指定サイズへ縮小します（4倍で描いて縮小＝アンチエイリアス）。
+4倍の大きさで描いてから指定サイズへ縮小します（＝なめらかな線）。
 """
 from __future__ import annotations
 
 import math
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 # ---- カラーパレット（グッズ化のときもこの値を使う） -------------------------
 PALETTE = {
-    "body": (140, 98, 68),        # こげ茶の羽
-    "body_dark": (108, 72, 48),   # 翼・耳羽
-    "belly": (238, 214, 176),     # おなか
-    "belly_mark": (196, 160, 118),
-    "face": (252, 240, 216),      # 顔のハート形
+    "fur": (255, 252, 246),       # 白い毛
+    "patch_a": (238, 150, 64),    # 三毛の茶
+    "patch_b": (72, 58, 52),      # 三毛の黒
+    "ear_in": (250, 184, 184),    # 耳の内側
+    "line": (76, 56, 50),         # 輪郭線
+    "eye": (52, 40, 36),
+    "nose": (240, 130, 140),
+    "mouth_in": (200, 80, 90),
+    "cheek": (250, 160, 160),
+    "collar": (206, 48, 52),      # 赤い首輪（招き猫）
+    "bell": (240, 196, 60),       # 金の鈴
+    "bell_dark": (180, 130, 30),
     "eye_white": (255, 255, 255),
-    "pupil": (40, 30, 26),
-    "glasses": (196, 150, 52),    # 金の丸メガネ（トレードマーク）
-    "beak": (240, 158, 52),
-    "beak_dark": (196, 110, 30),
-    "mouth_in": (170, 60, 50),
-    "cheek": (246, 160, 150),
-    "feet": (240, 158, 52),
-    "line": (60, 42, 32),
     "tear": (120, 190, 240),
     "halo": (255, 214, 102),
     "anger": (230, 70, 60),
-    "scarf": (196, 52, 52),       # 朱色の首巻き（寺社の朱をイメージ）
 }
 
 SS = 4          # スーパーサンプリング倍率
 BASE = 1000     # 設計キャンバスのサイズ
+LW = 13         # 輪郭線の太さ
 
 EXPRESSIONS = [
-    "normal",     # ふつう
-    "happy",      # にっこり
-    "surprised",  # びっくり
-    "thinking",   # 考え中
-    "sad",        # しょんぼり
-    "angry",      # ぷんすか
-    "wink",       # ウインク
-    "sleepy",     # ねむい
-    "satori",     # 悟り（オチ・まとめ用）
-    "shy",        # てれ
+    "normal", "happy", "surprised", "thinking", "sad",
+    "angry", "wink", "sleepy", "satori", "shy",
 ]
 
 EXPRESSION_LABELS = {
@@ -128,124 +119,144 @@ class _Pen:
         self.line(pts, fill, width)
 
 
-def _rotated_ellipse(size, cx, cy, rx, ry, angle, fill, scale):
-    """回転した楕円（翼など）を別レイヤーに描いて返す。"""
-    layer = Image.new("RGBA", size, (0, 0, 0, 0))
-    w, h = int(rx * 2 * scale), int(ry * 2 * scale)
-    e = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(e).ellipse((0, 0, w - 1, h - 1), fill=fill)
-    e = e.rotate(angle, expand=True, resample=Image.BICUBIC)
-    layer.paste(e, (int(cx * scale - e.width / 2), int(cy * scale - e.height / 2)), e)
-    return layer
-
-
 # ---- パーツ -------------------------------------------------------------------
-EYE_L = (390, 440)
-EYE_R = (610, 440)
-EYE_R_WHITE = 88
-GLASS_R = 112
+EYE_L = (385, 445)
+EYE_R = (615, 445)
+HEAD = (500, 420, 330, 255)      # cx, cy, rx, ry
+
+
+def _tail(pen, c):
+    # 体の後ろから右上へ伸びるしっぽ（輪郭→茶→先っぽ黒）
+    # 2次ベジェ曲線：体の右下（体に隠れる）→ 右へふくらんで → 上へ
+    p0, p1, p2 = (600, 880), (990, 900), (880, 450)
+    pts = []
+    for i in range(41):
+        t = i / 40
+        pts.append(((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+                    (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]))
+    pen.line(pts, c["line"], 82)
+    pen.line(pts, c["patch_a"], 82 - LW * 2)
+    pen.line(pts[-8:], c["patch_b"], 82 - LW * 2)
+
+
+def _ear(pen, c, side):
+    sx = -1 if side == "L" else 1
+    outer = [(500 + sx * 300, 330), (500 + sx * 285, 95), (500 + sx * 120, 200)]
+    inner = [(500 + sx * 268, 285), (500 + sx * 268, 150), (500 + sx * 165, 215)]
+    fill = c["patch_a"] if side == "L" else c["patch_b"]
+    pen.polygon(outer, fill=fill, outline=c["line"], width=LW)
+    pen.polygon(inner, fill=c["ear_in"])
+
+
+def _head(img, pen, c):
+    cx, cy, rx, ry = HEAD
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    lp = type(pen)(layer, pen.s)
+    lp.ellipse(cx, cy, rx, ry, fill=c["fur"])
+    # 三毛の模様（頭の形で切り抜く）
+    pat = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    pp = type(pen)(pat, pen.s)
+    pp.ellipse(250, 250, 210, 170, fill=c["patch_a"])        # 左上の茶
+    pp.ellipse(770, 240, 150, 110, fill=c["patch_b"])        # 右上の黒
+    pp.ellipse(500, 175, 70, 45, fill=c["patch_a"])          # おでこの小さな茶
+    mask = layer.getchannel("A")
+    pat.putalpha(ImageChops.multiply(pat.getchannel("A"), mask))
+    layer.alpha_composite(pat)
+    img.alpha_composite(layer)
+    pen.ellipse(cx, cy, rx, ry, outline=c["line"], width=LW)
 
 
 def _body(img, pen, c):
-    s = pen.s
-    # 足
+    _tail(pen, c)
+    # 胴体（座った姿勢）
+    pen.ellipse(500, 735, 255, 215, fill=c["fur"], outline=c["line"], width=LW)
+    pen.ellipse(330, 720, 70, 95, fill=c["patch_a"])     # 体の茶ぶち
+    pen.ellipse(500, 735, 255, 215, outline=c["line"], width=LW)
+    # 前足
     for x in (420, 580):
-        pen.ellipse(x, 925, 52, 26, fill=c["feet"])
-    # 耳羽（つの）
-    pen.polygon([(250, 330), (225, 175), (370, 265)], fill=c["body_dark"])
-    pen.polygon([(750, 330), (775, 175), (630, 265)], fill=c["body_dark"])
-    # 翼（胴体の後ろ）
-    for cx, ang in ((215, -18), (785, 18)):
-        layer = _rotated_ellipse(img.size, cx, 650, 80, 175, ang, c["body_dark"], s)
-        img.alpha_composite(layer)
-    # 胴体
-    pen.ellipse(500, 590, 320, 340, fill=c["body"])
-    # おなか
-    pen.ellipse(500, 720, 205, 195, fill=c["belly"])
-    for row, y in enumerate((690, 770, 850)):
-        xs = (440, 560) if row != 1 else (400, 500, 600)
-        for x in xs:
-            pen.arc(x, y - 20, 26, 20, 20, 160, c["belly_mark"], 9)
-    # 顔（ハート形の顔盤）
-    pen.circle(EYE_L[0], EYE_L[1], 150, fill=c["face"])
-    pen.circle(EYE_R[0], EYE_R[1], 150, fill=c["face"])
-    pen.polygon([(262, 500), (738, 500), (500, 655)], fill=c["face"])
-    pen.ellipse(500, 520, 210, 110, fill=c["face"])
-    # 首巻き（朱）
-    pen.arc(500, 560, 250, 110, 35, 145, c["scarf"], 34)
-    pen.polygon([(560, 665), (612, 655), (630, 740), (590, 735)], fill=c["scarf"])
+        pen.ellipse(x, 905, 68, 52, fill=c["fur"], outline=c["line"], width=LW)
+        for dx in (-18, 18):
+            pen.line([(x + dx, 878), (x + dx, 900)], c["line"], 8)
+    _ear(pen, c, "L")
+    _ear(pen, c, "R")
+    _head(img, pen, c)
+
+
+def _collar(pen, c, with_bell=True):
+    pen.arc(500, 560, 215, 105, 30, 150, c["line"], 46)
+    pen.arc(500, 560, 215, 105, 32, 148, c["collar"], 30)
+    if with_bell:
+        pen.circle(500, 690, 40, fill=c["bell"], outline=c["line"], width=9)
+        pen.line([(465, 684), (535, 684)], c["bell_dark"], 7)
+        pen.circle(500, 705, 8, fill=c["bell_dark"])
+        pen.line([(500, 708), (500, 728)], c["bell_dark"], 6)
+        pen.circle(486, 672, 9, fill=(255, 255, 255, 220))
+
+
+def _whiskers(pen, c):
+    for side in (-1, 1):
+        for dy, ang in ((-12, -10), (14, 4)):
+            x0 = 500 + side * 205
+            pen.line([(x0, 530 + dy), (x0 + side * 105, 530 + dy + ang)], c["line"], 7)
 
 
 def _cheeks(pen, c, strong=False):
-    a = 230 if strong else 150
-    for x in (285, 715):
-        pen.ellipse(x, 560, 50 if strong else 42, 26, fill=c["cheek"] + (a,))
+    a = 235 if strong else 160
+    for x in (300, 700):
+        pen.ellipse(x, 525, 50 if strong else 44, 27, fill=c["cheek"] + (a,))
 
 
-def _eye_open(pen, c, center, look=(0, 0), pupil_r=50, white_r=EYE_R_WHITE):
-    cx, cy = center
-    pen.circle(cx, cy, white_r, fill=c["eye_white"])
-    px, py = cx + look[0], cy + look[1]
-    pen.circle(px, py, pupil_r, fill=c["pupil"])
-    hr = max(9, pupil_r * 0.34)
-    pen.circle(px - pupil_r * 0.35, py - pupil_r * 0.38, hr, fill=(255, 255, 255))
-    pen.circle(px + pupil_r * 0.35, py + pupil_r * 0.32, hr * 0.45, fill=(255, 255, 255))
+def _eye_open(pen, c, center, look=(0, 0), r=(40, 50)):
+    cx, cy = center[0] + look[0], center[1] + look[1]
+    pen.ellipse(cx, cy, r[0], r[1], fill=c["eye"])
+    pen.circle(cx - r[0] * 0.3, cy - r[1] * 0.35, r[0] * 0.38, fill=(255, 255, 255))
+    pen.circle(cx + r[0] * 0.35, cy + r[1] * 0.35, r[0] * 0.16, fill=(255, 255, 255))
 
 
-def _eye_white_only(pen, c, center):
-    pen.circle(center[0], center[1], EYE_R_WHITE, fill=c["eye_white"])
+def _eye_surprised(pen, c, center):
+    pen.circle(center[0], center[1], 52, fill=c["eye_white"], outline=c["eye"], width=10)
+    pen.circle(center[0], center[1], 18, fill=c["eye"])
 
 
 def _eye_happy(pen, c, center):     # ∩
-    _eye_white_only(pen, c, center)
-    pen.arc(center[0], center[1] + 22, 46, 40, 200, 340, c["pupil"], 17)
+    pen.arc(center[0], center[1] + 22, 44, 38, 200, 340, c["eye"], 16)
 
 
-def _eye_calm(pen, c, center):      # ∪（悟り・ねむい）
-    _eye_white_only(pen, c, center)
-    pen.arc(center[0], center[1] - 10, 46, 30, 20, 160, c["pupil"], 15)
+def _eye_calm(pen, c, center):      # ∪
+    pen.arc(center[0], center[1] - 12, 44, 28, 20, 160, c["eye"], 15)
 
 
-def _eye_line(pen, c, center):      # ー（まばたき）
-    _eye_white_only(pen, c, center)
-    pen.line([(center[0] - 45, center[1] + 5), (center[0] + 45, center[1] + 5)], c["pupil"], 15)
+def _eye_line(pen, c, center):      # ー
+    pen.line([(center[0] - 42, center[1] + 5), (center[0] + 42, center[1] + 5)], c["eye"], 14)
 
 
-def _glasses(pen, c):
-    for cx, cy in (EYE_L, EYE_R):
-        pen.circle(cx, cy, GLASS_R, outline=c["glasses"], width=15)
-    # ブリッジ
-    pen.arc(500, 430, 18, 16, 200, 340, c["glasses"], 13)
-    # レンズの反射
-    for cx, cy in (EYE_L, EYE_R):
-        pen.arc(cx, cy, GLASS_R - 22, GLASS_R - 22, 200, 235, (255, 255, 255, 200), 9)
-
-
-def _beak(pen, c, open_=False, wide=False):
-    if not open_:
-        pen.polygon([(455, 520), (545, 520), (500, 600)], fill=c["beak"])
-        pen.polygon([(470, 520), (530, 520), (500, 545)], fill=c["beak_dark"])
-        return
-    h = 62 if wide else 44
-    pen.polygon([(450, 512), (550, 512), (500, 548)], fill=c["beak"])
-    pen.ellipse(500, 556 + h / 4, 40, h / 2 + 8, fill=c["mouth_in"])
-    pen.polygon([(462, 560 + h / 3), (538, 560 + h / 3), (500, 590 + h / 2)], fill=c["beak"])
+def _mouth(pen, c, open_=False, wide=False):
+    # 鼻
+    pen.polygon([(478, 497), (522, 497), (500, 520)], fill=c["nose"], outline=c["line"], width=5)
+    if open_:
+        h = 52 if wide else 36
+        pen.ellipse(500, 548 + h / 3, 30 if not wide else 26, h / 2 + 6, fill=c["mouth_in"],
+                    outline=c["line"], width=7)
+    # ω
+    pen.arc(477, 530, 23, 18, 10, 170, c["line"], 8)
+    pen.arc(523, 530, 23, 18, 10, 170, c["line"], 8)
 
 
 def _brows(pen, c, kind):
-    w = 13
-    if kind == "up":        # びっくり
-        pen.arc(EYE_L[0], 300, 60, 25, 200, 340, c["line"], w)
-        pen.arc(EYE_R[0], 300, 60, 25, 200, 340, c["line"], w)
-    elif kind == "sad":     # ハの字
-        pen.line([(320, 318), (440, 295)], c["line"], w)
-        pen.line([(680, 318), (560, 295)], c["line"], w)
-    elif kind == "angry":   # 逆ハの字
-        pen.line([(320, 290), (450, 325)], c["line"], w)
-        pen.line([(680, 290), (550, 325)], c["line"], w)
+    w = 12
+    lx, rx = EYE_L[0], EYE_R[0]
+    if kind == "up":
+        pen.arc(lx, 370, 45, 20, 200, 340, c["line"], w)
+        pen.arc(rx, 370, 45, 20, 200, 340, c["line"], w)
+    elif kind == "sad":
+        pen.line([(lx - 45, 380), (lx + 40, 360)], c["line"], w)
+        pen.line([(rx + 45, 380), (rx - 40, 360)], c["line"], w)
+    elif kind == "angry":
+        pen.line([(lx - 45, 355), (lx + 45, 385)], c["line"], w)
+        pen.line([(rx + 45, 355), (rx - 45, 385)], c["line"], w)
     elif kind == "think":
-        pen.line([(330, 305), (450, 300)], c["line"], w)
-        pen.line([(560, 285), (680, 310)], c["line"], w)
+        pen.line([(lx - 40, 370), (lx + 40, 365)], c["line"], w)
+        pen.line([(rx - 40, 352), (rx + 45, 372)], c["line"], w)
 
 
 def _sweat(pen, c, x, y, r=22):
@@ -299,10 +310,10 @@ def _sparkles(pen, c, pts):
 # ---- 公開API ------------------------------------------------------------------
 def draw(expression: str = "normal", size: int = 512, talking: bool = False,
          blink: bool = False, palette: dict | None = None) -> Image.Image:
-    """ちえふくを描いた RGBA 画像（正方形・背景透明）を返す。
+    """キャラを描いた RGBA 画像（正方形・背景透明）を返す。
 
     expression: EXPRESSIONS のいずれか
-    talking   : くちばしを開ける（口パク用）
+    talking   : 口を開ける（口パク用）
     blink     : 目を閉じる（まばたき用）
     """
     if expression not in EXPRESSIONS:
@@ -314,53 +325,52 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
     px = size * SS
     img = Image.new("RGBA", (px, px), (0, 0, 0, 0))
     pen = _Pen(img, px / BASE)
+    e = expression
 
-    if expression == "satori":
+    if e == "satori":
         _halo(img, pen, c)
     _body(img, pen, c)
+    _collar(pen, c)
 
     # --- 目 ---
-    e = expression
     if blink and e not in ("happy", "satori", "sleepy"):
         _eye_line(pen, c, EYE_L)
         _eye_line(pen, c, EYE_R)
     elif e in ("normal", "angry"):
-        _eye_open(pen, c, EYE_L, (6, 6))
-        _eye_open(pen, c, EYE_R, (-6, 6))
+        _eye_open(pen, c, EYE_L)
+        _eye_open(pen, c, EYE_R)
     elif e == "happy":
         _eye_happy(pen, c, EYE_L)
         _eye_happy(pen, c, EYE_R)
     elif e == "surprised":
-        _eye_open(pen, c, EYE_L, (0, 0), pupil_r=26, white_r=EYE_R_WHITE + 6)
-        _eye_open(pen, c, EYE_R, (0, 0), pupil_r=26, white_r=EYE_R_WHITE + 6)
+        _eye_surprised(pen, c, EYE_L)
+        _eye_surprised(pen, c, EYE_R)
     elif e == "thinking":
-        _eye_open(pen, c, EYE_L, (22, -28), pupil_r=44)
-        _eye_open(pen, c, EYE_R, (22, -28), pupil_r=44)
+        _eye_open(pen, c, EYE_L, (14, -14), (36, 44))
+        _eye_open(pen, c, EYE_R, (14, -14), (36, 44))
     elif e == "sad":
-        _eye_open(pen, c, EYE_L, (0, 22), pupil_r=46)
-        _eye_open(pen, c, EYE_R, (0, 22), pupil_r=46)
+        _eye_open(pen, c, EYE_L, (0, 10), (36, 44))
+        _eye_open(pen, c, EYE_R, (0, 10), (36, 44))
     elif e == "wink":
-        _eye_open(pen, c, EYE_L, (6, 6))
+        _eye_open(pen, c, EYE_L)
         _eye_happy(pen, c, EYE_R)
     elif e in ("sleepy", "satori"):
         _eye_calm(pen, c, EYE_L)
         _eye_calm(pen, c, EYE_R)
     elif e == "shy":
-        _eye_open(pen, c, EYE_L, (-24, 18), pupil_r=46)
-        _eye_open(pen, c, EYE_R, (-24, 18), pupil_r=46)
+        _eye_open(pen, c, EYE_L, (-14, 8), (36, 44))
+        _eye_open(pen, c, EYE_R, (-14, 8), (36, 44))
 
-    _glasses(pen, c)
-
-    # --- 口・ほっぺ・眉 ---
-    open_ = talking or e in ("happy", "surprised")
-    _beak(pen, c, open_=open_, wide=(e == "surprised"))
+    # --- 口・ほっぺ・ひげ・眉・効果 ---
     _cheeks(pen, c, strong=(e in ("shy", "happy")))
+    _whiskers(pen, c)
+    _mouth(pen, c, open_=talking or e in ("happy", "surprised"), wide=(e == "surprised"))
 
     if e == "surprised":
         _brows(pen, c, "up")
     elif e == "sad":
         _brows(pen, c, "sad")
-        _sweat(pen, c, EYE_L[0] - 20, 590, 20)   # 涙
+        _sweat(pen, c, EYE_L[0] - 30, 540, 20)   # 涙
     elif e == "angry":
         _brows(pen, c, "angry")
         _anger_mark(pen, c)
@@ -370,13 +380,13 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
     elif e == "sleepy":
         _zzz(pen, c)
     elif e == "shy":
-        _sweat(pen, c, 790, 330, 24)
-        for x in (255, 300, 700, 745):            # 赤面の斜線
-            pen.line([(x, 545), (x + 20, 520)], c["anger"], 7)
-    elif e == "happy" or e == "wink":
-        _sparkles(pen, c, [(140, 230, 40), (870, 300, 32)])
+        _sweat(pen, c, 820, 330, 24)
+        for x in (270, 315, 685, 730):            # 赤面の斜線
+            pen.line([(x, 535), (x + 20, 510)], c["anger"], 7)
+    elif e in ("happy", "wink"):
+        _sparkles(pen, c, [(110, 230, 40), (900, 330, 32)])
     elif e == "satori":
-        _sparkles(pen, c, [(130, 200, 36), (880, 220, 44), (120, 760, 28)])
+        _sparkles(pen, c, [(120, 200, 36), (890, 220, 44), (110, 760, 28)])
 
     return img.resize((size, size), Image.LANCZOS)
 
@@ -384,4 +394,4 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
 if __name__ == "__main__":
     import sys
     expr = sys.argv[1] if len(sys.argv) > 1 else "normal"
-    draw(expr, 800).save(f"chiefuku_{expr}.png")
+    draw(expr, 800).save(f"mascot_{expr}.png")

@@ -1,5 +1,5 @@
 id: "001"
-title: "【仏教】「諸行無常」は悲しい言葉じゃない？ちえふくと1分で学ぶ"
+title: "【仏教】「諸行無常」は悲しい言葉じゃない？ことにゃんと1分で学ぶ"
 category: buddhism
 term: 諸行無常
 reading: しょぎょうむじょう
@@ -16,9 +16,10 @@ thumbnail:
 scenes:
   - type: title
     lines:
-      - { expression: happy, text: "こんにちは！古いことばを集めるフクロウ、ちえふくだよ！" }
+      - { expression: happy, text: "こんにちは！古いことばを集める三毛猫、ことにゃんだよ！" }
       - { expression: normal, text: "今日のことばは「諸行無常」！", say: "今日のことばは、しょぎょうむじょう！" }
       - { expression: wink, text: "どこかで聞いたことがあるよね？" }
+      - { expression: normal, text: "でも本当の意味を知ると、ちょっと気持ちが楽になることばなんだ。" }
 
   - type: talk
     heading: "どんな意味？"
@@ -35,6 +36,7 @@ scenes:
     lines:
       - { text: "諸行無常は、仏教の大切な教え「三法印」のひとつなんだ。", say: "しょぎょうむじょうは、仏教の大切な教え、さんぼういんの、ひとつなんだ。" }
       - { text: "仏教かどうかを見分ける「しるし」とも言われているよ。" }
+      - { expression: thinking, text: "ほかの2つは「諸法無我」と「涅槃寂静」。またいつか紹介するね。", say: "ほかの2つは、しょほうむがと、ねはんじゃくじょう。またいつか紹介するね。" }
 
   - type: quote
     heading: "有名な一節"
@@ -42,6 +44,7 @@ scenes:
     note: "『平家物語』冒頭"
     lines:
       - { text: "いちばん有名なのは『平家物語』の書き出しだね。", say: "いちばん有名なのは、へいけものがたりの書き出しだね。" }
+      - { expression: normal, text: "お寺の鐘の音に、この世の移り変わりを重ねているんだ。" }
       - { expression: sad, text: "栄えた平家もやがて滅びる…という、少しさみしい響きだよ。", say: "栄えた平家もやがて滅びる、という、少しさみしい響きだよ。" }
 
   - type: talk
@@ -55,4 +58,5 @@ scenes:
   - type: ending
     lines:
       - { expression: satori, text: "諸行無常。変わるからこそ、今この時を大切に。", say: "しょぎょうむじょう。変わるからこそ、今この時を大切に。", pause: 0.6 }
+      - { expression: wink, text: "今日のことば、だれかに話したくなったかな？" }
       - { expression: happy, text: "また次回も、古いことばを一緒に集めようね！" }

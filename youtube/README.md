@@ -1,10 +1,10 @@
-# ちえふくの古ことば帖 — YouTube 制作キット
+# ことにゃんの古ことば帖 — YouTube 制作キット
 
-マスコット **ちえふく** が、仏教・聖書・故事成語などの「古いことば」を紹介する動画を、
+マスコット **ことにゃん** が、仏教・聖書・故事成語などの「古いことば」を紹介する動画を、
 **台本（YAML）を1枚書くだけで** 量産するための仕組みです。
 同じキャラ素材から **LINEスタンプ** と **グッズ用の高解像度画像** も書き出せます。
 
-![キャラクター](character/chiefuku_sheet.png)
+![キャラクター](character/character_sheet.png)
 
 ## できること
 
@@ -40,12 +40,13 @@ BGM を入れたいときは `assets/bgm/` に音源を置き、`config.yaml` �
 ## 1本作る流れ
 
 ```
-① ネタを決める     … 仏教語 / 聖書のことば / 故事成語 / ことわざ
+① ネタを決める     … 構成メモ.md のネタ帳から選ぶ
 ② 台本を書く        … python tools/new_episode.py <slug> → YAML を埋める
                       （Claude Code なら「〇〇の回を作って」で台本作成〜レンダリングまで自動）
 ③ プレビュー確認    … python tools/render.py episodes/xxx.yaml --preview
 ④ 書き出し          … python tools/render.py episodes/xxx.yaml --format both
 ⑤ アップロード      … video.mp4 / thumbnail.png / metadata.txt の内容 / subtitles.srt
+⑥ 記録              … 構成メモ.md のネタ帳を「済」に、再生数をメモ
 ```
 
 ### 台本の書き方
@@ -65,12 +66,13 @@ scenes:
 
 ```
 youtube/
+├── 構成メモ.md            チャンネル方針・動画の型・ネタ帳 ← まずここを見る
 ├── config.yaml            チャンネル名・カテゴリ色・声・フォント・BGM
 ├── character/PROFILE.md   キャラ設定（口調・色・NG）← 台本を書く前に読む
 ├── episodes/              台本（1本 = 1ファイル）
 ├── stamps/stamps.yaml     LINEスタンプの文言と表情
 ├── tools/
-│   ├── chiefuku.py        キャラ描画（表情はここで増やす）
+│   ├── mascot.py          キャラ描画（表情はここで増やす）
 │   ├── render.py          台本 → 動画・サムネ・字幕・概要欄
 │   ├── stamps.py          LINEスタンプ・グッズ用画像
 │   └── ...
@@ -80,7 +82,7 @@ youtube/
 ## カスタマイズ
 
 - **カテゴリを増やす**（例: 神道、ギリシャ神話）… `config.yaml` の `categories` に追加
-- **キャラの色を変える** … `tools/chiefuku.py` の `PALETTE`
+- **キャラの色を変える** … `tools/mascot.py` の `PALETTE`
 - **画面レイアウト** … `tools/render.py` の `LAYOUTS`
 - **画像を出したい** … シーンに `image: assets/xxx.png` を書くとボードに表示
 
@@ -100,5 +102,5 @@ youtube/
 
 ## ライセンスまわり
 
-- キャラクター「ちえふく」とこのツールの出力画像はあなたのオリジナル素材として使えます（グッズ化OK）
+- キャラクター「ことにゃん」とこのツールの出力画像はあなたのオリジナル素材として使えます（グッズ化OK）
 - フォント M PLUS Rounded 1c は SIL Open Font License（商用利用・スタンプ利用OK）

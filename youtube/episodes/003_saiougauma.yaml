@@ -15,7 +15,7 @@ thumbnail:
 scenes:
   - type: title
     lines:
-      - { expression: happy, text: "こんにちは、ちえふくだよ！" }
+      - { expression: happy, text: "こんにちは、ことにゃんだよ！" }
       - { text: "今日は故事成語「塞翁が馬」！", say: "今日は故事成語、さいおうがうま！" }
       - { text: "中国の古い本『淮南子』にあるお話なんだ。", say: "中国の古い本、えなんじにあるお話なんだ。" }
 

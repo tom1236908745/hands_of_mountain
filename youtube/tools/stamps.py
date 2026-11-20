@@ -19,8 +19,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import chiefuku  # noqa: E402
-from common import ROOT, font, load_yaml, wrap  # noqa: E402
+import mascot  # noqa: E402
+from common import ROOT, config, font, load_yaml, wrap  # noqa: E402
 
 STAMP_W, STAMP_H, MARGIN = 370, 320, 10
 DEFAULT_COLOR = (108, 72, 48)
@@ -69,7 +69,7 @@ def make_stamp(spec: dict) -> Image.Image:
     if text:
         n_lines = text.count("\n") + 1
         text_h = int(inner_h * (0.30 if n_lines == 1 else 0.42))
-    ch = _fit(chiefuku.draw(spec["expression"], 1200), inner_w, inner_h - int(text_h * 0.75))
+    ch = _fit(mascot.draw(spec["expression"], 1200), inner_w, inner_h - int(text_h * 0.75))
     top = spec.get("text_pos", "top") == "top"
     cx = (STAMP_W - ch.width) // 2
     cy = STAMP_H - MARGIN - ch.height if top else MARGIN
@@ -83,7 +83,7 @@ def make_stamp(spec: dict) -> Image.Image:
 
 def make_icon(expression: str, w: int, h: int, margin: int) -> Image.Image:
     canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ch = _fit(chiefuku.draw(expression, 1000), w - margin * 2, h - margin * 2)
+    ch = _fit(mascot.draw(expression, 1000), w - margin * 2, h - margin * 2)
     canvas.alpha_composite(ch, ((w - ch.width) // 2, (h - ch.height) // 2))
     return canvas
 
@@ -138,8 +138,8 @@ def main():
     if args.hires:
         hd = ROOT / "output" / "character_hires"
         hd.mkdir(parents=True, exist_ok=True)
-        for e in chiefuku.EXPRESSIONS:
-            chiefuku.draw(e, args.hires).save(hd / f"chiefuku_{e}.png")
+        for e in mascot.EXPRESSIONS:
+            mascot.draw(e, args.hires).save(hd / f"{config()["channel"]["character_name"]}_{e}.png")
         print(f"グッズ用高解像度 {args.hires}px → {hd}")
 
 

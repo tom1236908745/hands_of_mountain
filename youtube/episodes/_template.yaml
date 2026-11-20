@@ -27,13 +27,13 @@ thumbnail:
 #   text: 字幕（1行40字くらいまで）
 #   say: 読み上げ用のふりがな（読み間違えるときだけ）
 #   expression: normal happy surprised thinking sad angry wink sleepy satori shy
-#   speaker: chiefuku（既定） / narration
+#   speaker: main（既定・メインキャラ） / narration
 #   pause: 1.0   … 行のあとに余分に間をあける（秒）
 
 scenes:
   - type: title
     lines:
-      - { expression: happy, text: "こんにちは、ちえふくだよ！" }
+      - { expression: happy, text: "こんにちは、ことにゃんだよ！" }
       - { expression: normal, text: "今日のことばは「用語」！" }
 
   - type: talk

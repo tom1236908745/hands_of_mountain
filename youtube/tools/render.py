@@ -25,7 +25,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import chiefuku  # noqa: E402
+import mascot  # noqa: E402
 import voice  # noqa: E402
 from common import ROOT, category, config, font, load_yaml, rounded_box, text_block, vertical_gradient  # noqa: E402
 
@@ -50,7 +50,7 @@ LAYOUTS = {
     ),
 }
 
-SPEAKER_NAMES = {"chiefuku": None, "narration": "ナレーション"}  # None → config のキャラ名
+SPEAKER_NAMES = {"main": None, "narration": "ナレーション"}  # None → config のキャラ名
 
 
 @dataclass
@@ -95,10 +95,10 @@ def load_episode(path: Path, use_voice: bool) -> Episode:
     for si, scene in enumerate(data["scenes"]):
         for ln in scene.get("lines", []):
             text = str(ln["text"])
-            line = Line(si, text, str(ln.get("say", text)).replace("\n", ""), ln.get("speaker", "chiefuku"),
+            line = Line(si, text, str(ln.get("say", text)).replace("\n", ""), ln.get("speaker", "main"),
                         ln.get("expression", scene.get("expression", "normal")))
-            if line.expression not in chiefuku.EXPRESSIONS:
-                raise ValueError(f"{path}: 表情 '{line.expression}' は使えません {chiefuku.EXPRESSIONS}")
+            if line.expression not in mascot.EXPRESSIONS:
+                raise ValueError(f"{path}: 表情 '{line.expression}' は使えません {mascot.EXPRESSIONS}")
             if use_voice:
                 line.wav = voice.synth(line.say, line.speaker, vdir)
             if line.wav:
@@ -125,7 +125,7 @@ _char_cache: dict = {}
 def char_img(expr, size, talking=False, blink=False):
     key = (expr, size, talking, blink)
     if key not in _char_cache:
-        _char_cache[key] = chiefuku.draw(expr, size, talking=talking, blink=blink)
+        _char_cache[key] = mascot.draw(expr, size, talking=talking, blink=blink)
     return _char_cache[key]
 
 
