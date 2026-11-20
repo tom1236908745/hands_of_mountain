@@ -69,7 +69,7 @@ def make_stamp(spec: dict) -> Image.Image:
     if text:
         n_lines = text.count("\n") + 1
         text_h = int(inner_h * (0.30 if n_lines == 1 else 0.42))
-    ch = _fit(mascot.draw(spec["expression"], 1200), inner_w, inner_h - int(text_h * 0.75))
+    ch = _fit(mascot.draw(spec["expression"], 1200, item=spec.get("item")), inner_w, inner_h - int(text_h * 0.75))
     top = spec.get("text_pos", "top") == "top"
     cx = (STAMP_W - ch.width) // 2
     cy = STAMP_H - MARGIN - ch.height if top else MARGIN

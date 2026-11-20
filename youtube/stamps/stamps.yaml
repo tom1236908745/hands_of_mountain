@@ -1,6 +1,7 @@
 # LINEスタンプの一覧。python tools/stamps.py で LINE Creators Market 用の画像一式を出力
 # 個数は 8 / 16 / 24 / 32 / 40 のどれか（LINE の規定）
-# text_pos: top / bottom（省略時 top）  color: 文字色 [R,G,B]（省略時カテゴリ色っぽい茶）
+# text_pos: top / bottom（省略時 top）  color: 文字色 [R,G,B]（省略時は線の茶）
+# item: book で「ことば帖」を持つ
 main: { expression: happy }          # メイン画像（ストア表示用 240x240）
 tab: { expression: normal }          # トークルームタブ（96x74）
 
@@ -8,16 +9,16 @@ stamps:
   - { expression: happy,     text: "ありがとにゃ" }
   - { expression: normal,    text: "おはよう" }
   - { expression: wink,      text: "りょうかい！" }
-  - { expression: happy,     text: "おつかれさま" }
+  - { expression: happy,     text: "おつかれさま", item: book }
   - { expression: surprised, text: "にゃんと！" }
   - { expression: thinking,  text: "はて？" }
-  - { expression: sad,       text: "しょんぼり" }
+  - { expression: pien,      text: "ぴえん" }
   - { expression: angry,     text: "ぷんすか" }
-  - { expression: sleepy,    text: "おやすみにゃ" }
+  - { expression: sleepy,    text: "おやすみ…" }
   - { expression: shy,       text: "てれる…" }
-  - { expression: satori,    text: "ありがたや〜", color: [196, 130, 20] }
+  - { expression: blank,     text: "スン…" }
+  - { expression: normal,    text: "メモしとく", item: book, color: [96, 124, 148] }
   - { expression: satori,    text: "諸行無常…", color: [176, 92, 40] }
   - { expression: wink,      text: "塞翁が馬！\nドンマイ", color: [60, 120, 80] }
   - { expression: surprised, text: "目から鱗！", color: [58, 92, 160] }
-  - { expression: wink,      text: "猫に小判？", color: [196, 130, 20] }
-  - { expression: happy,     text: "求めよ\nさらば与えられん", color: [58, 92, 160] }
+  - { expression: satori,    text: "ありがたや〜", color: [196, 130, 20] }
