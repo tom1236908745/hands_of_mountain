@@ -33,7 +33,12 @@ PALETTE = {
     "halo": (255, 220, 130),
     "anger": (232, 112, 100),
     "bubble": (200, 228, 246),
+    "lantern": (250, 238, 210),   # ちょうちんの紙（消えているとき）
+    "lantern_lit": (255, 214, 120),
+    "lantern_cap": (70, 58, 56),
 }
+
+LANTERN_CENTER = (500, 808)   # ちょうちんの中心（設計キャンバス座標。アニメで光の位置に使う）
 
 SS = 4          # スーパーサンプリング倍率
 BASE = 1000     # 設計キャンバスのサイズ
@@ -41,14 +46,14 @@ LW = 12         # 線の太さ
 
 EXPRESSIONS = [
     "normal", "happy", "surprised", "thinking", "sad",
-    "angry", "wink", "sleepy", "satori", "shy", "blank", "pien",
+    "angry", "wink", "sleepy", "satori", "shy", "blank", "pien", "strain", "calm",
 ]
 
 EXPRESSION_LABELS = {
     "normal": "ふつう", "happy": "にっこり", "surprised": "びっくり",
     "thinking": "考え中", "sad": "しょんぼり", "angry": "ぷんすか",
     "wink": "ウインク", "sleepy": "ねむい", "satori": "悟り", "shy": "てれ",
-    "blank": "スン…", "pien": "ぴえん",
+    "blank": "スン…", "pien": "ぴえん", "strain": "がんばる", "calm": "おだやか",
 }
 
 
@@ -362,15 +367,44 @@ def _sparkles(pen, c, pts):
                     fill=c["halo"])
 
 
+def _lantern(pen, c, level=0.0):
+    """小さなちょうちん（両手で上の持ち手をつかむ）。level 0〜1 で明るい色に。"""
+    x, y = LANTERN_CENTER
+    rx, ry = 62, 72
+    col = tuple(int(a + (b - a) * min(1, level)) for a, b in zip(c["lantern"], c["lantern_lit"]))
+    pen.ellipse(x, y, rx, ry, fill=col)
+    for k in (-0.6, -0.3, 0.0, 0.3, 0.6):                  # 竹ひごの線
+        yy = y + k * ry
+        hw = rx * (1 - k * k) ** 0.5
+        pen.line([(x - hw + 5, yy), (x + hw - 5, yy)], c["line"] + (90,), 4)
+    pen.line(_wobble([(x + rx * math.cos(a), y + ry * math.sin(a))
+                      for a in (i / 60 * 2 * math.pi for i in range(61))], amp=1.0), c["line"], 7)
+    for yy in (y - ry, y + ry):                             # 上下のふた
+        pen.polygon([(x - 36, yy - 11), (x + 36, yy - 11), (x + 36, yy + 11), (x - 36, yy + 11)],
+                    fill=c["lantern_cap"])
+    pen.line([(x, y - ry - 10), (x, y - ry - 26)], c["lantern_cap"], 7)
+    # 前足（持ち手をつかむ）
+    for px in (x - 30, x + 30):
+        pen.ellipse(px, y - ry - 30, 27, 23, fill=c["fur"], outline=c["line"], width=8)
+
+
+def _eye_squeeze(pen, c, center, side):     # ＞＜
+    cx, cy = center
+    pen.line([(cx - 24 * side, cy - 20), (cx + 18 * side, cy), (cx - 24 * side, cy + 20)], c["eye"], 13)
+
+
 # ---- 公開API ------------------------------------------------------------------
 def draw(expression: str = "normal", size: int = 512, talking: bool = False,
-         blink: bool = False, palette: dict | None = None, item: str | None = None) -> Image.Image:
+         blink: bool = False, palette: dict | None = None, item: str | None = None,
+         lantern: float = 0.0, ss: int | None = None) -> Image.Image:
     """キャラを描いた RGBA 画像（正方形・背景透明）を返す。
 
     expression: EXPRESSIONS のいずれか
     talking   : 口を開ける（口パク用）
     blink     : 目を閉じる（まばたき用）
-    item      : "book" で ことば帖 を持つ
+    item      : "book" で ことば帖 を持つ / "lantern" でちょうちんを持つ
+    lantern   : ちょうちんの明るさ 0〜1
+    ss        : 内部の拡大倍率（省略時 4。アニメで大きく描くときは 1〜2 にして速くする）
     """
     if expression not in EXPRESSIONS:
         raise ValueError(f"unknown expression: {expression} (使えるのは {EXPRESSIONS})")
@@ -378,7 +412,8 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
     if palette:
         c.update(palette)
 
-    px = size * SS
+    ss = ss or SS
+    px = size * ss
     img = Image.new("RGBA", (px, px), (0, 0, 0, 0))
     pen = _Pen(img, px / BASE)
     e = expression
@@ -388,9 +423,11 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
     _body(img, pen, c)
     if item == "book":
         _book(pen, c)
+    elif item == "lantern":
+        _lantern(pen, c, lantern)
 
     # --- ほっぺ（目より先に） ---
-    _cheeks(pen, c, strong=e in ("shy", "happy", "pien"))
+    _cheeks(pen, c, strong=e in ("shy", "happy", "pien", "strain"))
     if e == "blank":
         pass
 
@@ -433,10 +470,16 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
     elif e == "pien":
         _pien_eye(pen, c, L)
         _pien_eye(pen, c, R)
+    elif e == "strain":
+        _eye_squeeze(pen, c, L, 1)
+        _eye_squeeze(pen, c, R, -1)
+    elif e == "calm":
+        _eye_calm(pen, c, L)
+        _eye_calm(pen, c, R)
 
     # --- 口 ---
     kind = {"surprised": "o", "sad": "wobble", "pien": "wobble", "blank": "flat", "angry": "puff",
-            "thinking": "flat"}.get(e, "w")
+            "thinking": "flat", "strain": "wobble"}.get(e, "w")
     _mouth(pen, c, kind, open_=(talking or e == "happy") and kind == "w")
 
     # --- 効果 ---
@@ -459,11 +502,15 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
         _sparkles(pen, c, [(130, 300, 38), (880, 360, 30)])
     elif e == "satori":
         _sparkles(pen, c, [(120, 220, 34), (890, 250, 42), (110, 780, 26)])
+    elif e == "strain":
+        for x in (300, 700):                      # ぷくっと力む
+            pen.ellipse(x, 645, 50, 32, fill=c["cheek"] + (230,))
+        _sweat(pen, c, 800, 450, 20)
     elif e == "blank":
         for x in (380, 620):                       # 縦線（スン…）
             pen.line([(x, 470), (x, 515)], c["line"] + (120,), 5)
 
-    return img.resize((size, size), Image.LANCZOS)
+    return img if ss == 1 else img.resize((size, size), Image.LANCZOS)
 
 
 if __name__ == "__main__":

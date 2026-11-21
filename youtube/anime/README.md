@@ -40,6 +40,7 @@ python anime/make.py ep01_ichigu                            # 本番（4コア�
 | `scenery.py` | 月夜の森（空・月・星・3層の木・草・葉・つる草） |
 | `cast/firefly.py` | ホタル（表情：open/squeeze/closed/wide/happy/sad、光る量、はばたき） |
 | `cast/snail.py` | カタツムリ親子（sad/normal/happy/content、目の柄の垂れ、涙）とハート |
+| `cast/neko.py` | マスコット「ことにゃん」（tools/mascot.py）をアニメに出す。ちょうちん・ぴょんジャンプ・色違いの子ねこ/母ねこ |
 | `make.py` | 書き出し・確認シート・字幕のフォント欠け検査 |
 
 ### 絵の3つの層
@@ -60,4 +61,5 @@ fr.lights.append(Light(x, y, 半径, 強さ))
 
 | ep | タイトル | 出典 | 長さ |
 |---|---|---|---|
-| 01 | 一隅を照らす | 最澄『山家学生式』 | 38秒 |
+| 01 | 一隅を照らす（ホタル版） | 最澄『山家学生式』 | 38秒 |
+| 02 | 一隅を照らす（ことにゃん版） | 最澄『山家学生式』 | 38秒 |

@@ -57,6 +57,9 @@
 | `blank` | スン…（無の顔）。ツッコミ・あきれ |
 | `satori` | まとめ（後光つき） |
 | `shy` | 照れ・ほめられたとき |
+| `strain` | がんばる・力む（＞＜・ぷくっとほっぺ） |
+| `calm` | おだやかに目を閉じる・祈る・寄り添う |
 
-`item="book"` で ことば帖 を持たせられる（`mascot.draw("happy", 800, item="book")`）。
+`item="book"` で ことば帖、`item="lantern"` でちょうちんを持たせられる（`lantern=0〜1` で灯りの明るさ）。
+アニメでは `anime/cast/neko.py` から使う。
 表情を増やすときは `tools/mascot.py` の `EXPRESSIONS` に名前を足し、`draw()` に分岐を追加します。

@@ -181,3 +181,87 @@ class Vine:
         for u, ln in ((0.18, 60), (0.5, 0), (0.8, 50)):
             x, y, _ = self.at(u)
             cv.ellipse(x, y - 6, 9, 4, VINE, rot=-30 + u * 60)
+
+
+# ---------------------------------------------------------------- 地面・小川・飛び石
+GROUND = (34, 70, 58)
+GROUND_TOP = (58, 108, 84)
+WATER = (18, 40, 66)
+STONE = (120, 128, 136)
+STONE_TOP = (160, 168, 176)
+
+
+class Banks:
+    """左右の土手と、そのあいだの小川。left_edge / right_edge は川岸の x。"""
+
+    def __init__(self, ground_y=1490, left_edge=470, right_edge=715, water_y=1575):
+        self.g, self.le, self.re, self.wy = ground_y, left_edge, right_edge, water_y
+
+    def ground_at(self, x):
+        return self.g + 4 * math.sin(x * 0.012)
+
+    def draw(self, cv, ev, t):
+        g, le, re, wy = self.g, self.le, self.re, self.wy
+        # 小川
+        cv.poly([(le - 40, wy - 10), (re + 40, wy - 10), (re + 60, wy + 90), (le - 60, wy + 90)], WATER)
+        for i in range(7):                       # 月明かりの反射（ゆらゆら）
+            x = le + 25 + i * (re - le - 50) / 6 + math.sin(t * 1.3 + i) * 8
+            y = wy + 12 + (i % 3) * 14
+            ev.line([(x - 16, y), (x + 16, y)], (60, 70, 90), 3)
+        # 左の土手
+        left = [(-400, g + 10)] + [(x, self.ground_at(x)) for x in range(-300, le - 20, 40)]
+        left += [(le, g + 14), (le + 18, wy - 2), (le + 10, 2400), (-400, 2400)]
+        cv.poly(left, GROUND)
+        cv.line([(x, self.ground_at(x)) for x in range(-300, le - 10, 20)], GROUND_TOP, 8)
+        # 右の土手
+        right = [(re - 18, wy - 2), (re, g + 14)] + [(x, self.ground_at(x)) for x in range(re + 20, 1500, 40)]
+        right += [(1500, 2400), (re - 10, 2400)]
+        cv.poly(right, GROUND)
+        cv.line([(x, self.ground_at(x)) for x in range(re + 10, 1500, 20)], GROUND_TOP, 8)
+        # 手前の地面（小川の手前側の岸）
+        front = [(-400, wy + 70)] + [(x, wy + 62 + 10 * math.sin(x * 0.01)) for x in range(-300, 1500, 60)]
+        cv.poly(front + [(1500, 2400), (-400, 2400)], tuple(int(v * 0.8) for v in GROUND))
+        cv.line([(x, wy + 62 + 10 * math.sin(x * 0.01)) for x in range(-300, 1500, 30)], GROUND_TOP, 6)
+        # 草の房
+        rnd = random.Random(5)
+        for _ in range(26):
+            x = rnd.choice([rnd.uniform(-200, le - 30), rnd.uniform(re + 30, 1400)])
+            y = self.ground_at(x) + 2
+            for k in (-1, 0, 1):
+                sway = math.sin(t * 1.1 + x) * 3
+                cv.poly([(x + k * 7 - 4, y), (x + k * 7 + 4, y), (x + k * 12 + sway, y - rnd.uniform(18, 34))],
+                        GROUND_TOP)
+
+
+class Stones:
+    def __init__(self, pts, rx=30, ry=12):
+        self.pts, self.rx, self.ry = pts, rx, ry
+
+    def draw(self, cv):
+        for x, y in self.pts:
+            cv.ellipse(x, y + 4, self.rx + 4, self.ry + 5, (10, 24, 40))
+            cv.ellipse(x, y, self.rx, self.ry + 4, STONE)
+            cv.ellipse(x - 4, y - 3, self.rx * 0.75, self.ry * 0.6, STONE_TOP)
+
+
+# ---------------------------------------------------------------- 空へ舞うホタルの群れ
+def firefly_swarm(fr, t, n=46, seed=11, start=0.3):
+    import firefly
+    rnd = random.Random(seed)
+    bv, ev = fr.base(), fr.emit()
+    for i in range(n):
+        sx, sy = rnd.uniform(-40, 1120), rnd.uniform(1660, 1820)
+        tx, ty = rnd.uniform(-20, 1100), rnd.uniform(140, 1050)
+        t0 = start + i * 0.075 + rnd.uniform(0, 0.5)
+        dur, ph = rnd.uniform(3.2, 5.0), rnd.uniform(0, 6.28)
+        sp, s = rnd.uniform(0.6, 1.4), rnd.uniform(3.2, 5.0)
+        if t < t0 - 0.2:
+            continue
+        u = min(1.0, max(0.0, (t - t0) / dur))
+        uu = 1 - (1 - u) ** 3
+        wob = math.sin(t * 2.2 * sp + ph)
+        x = lerp(sx, tx, uu) + wob * 28 * (0.4 + uu) + math.sin(t * 0.4 + ph) * 20 * uu
+        y = lerp(sy, ty, uu) + math.cos(t * 1.7 * sp + ph) * 14 * uu
+        on = min(1.0, max(0.0, (t - t0) / 0.6))
+        level = on * (0.65 + 0.35 * math.sin(t * 2.5 * sp + ph))
+        firefly.draw_tiny(bv, ev, x, y, s, level, t * 40 + ph)

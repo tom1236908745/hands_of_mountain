@@ -268,6 +268,7 @@ class Frame:
     lights: list = field(default_factory=list)
     fade: float = 0.0               # 1 で真っ黒
     bloom: float = 1.0
+    light_cap: float = 1.6          # 光で明るくなる上限（白いキャラが白飛びするなら下げる）
 
     def __post_init__(self):
         w, h = self.size
@@ -320,7 +321,7 @@ class Frame:
             else:
                 amb = amb * self.ambient_map
         lm = amb[..., None] + light
-        lm = 1.6 * (1 - np.exp(-lm / 1.6))          # 光が重なっても白飛びしにくいように頭打ち
+        lm = self.light_cap * (1 - np.exp(-lm / self.light_cap))          # 光が重なっても白飛びしにくいように頭打ち
         lm = np.asarray(Image.fromarray(np.clip(lm * 80, 0, 255).astype(np.uint8)).resize((w, h), Image.BILINEAR),
                         dtype=np.float32) / 80.0
         out = base * lm
