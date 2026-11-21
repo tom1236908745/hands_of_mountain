@@ -149,6 +149,74 @@ class Mix:
         st = np.stack([sig * env, np.roll(sig, 2000) * env], axis=1)
         self.dry += st.astype(np.float32) * vel
 
+    def _noise(self, n, lo, hi):
+        spec = np.fft.rfft(self.rng.standard_normal(n))
+        f = np.fft.rfftfreq(n, 1 / SR)
+        spec *= ((f > lo) & (f < hi)).astype(float)
+        sig = np.fft.irfft(spec, n)
+        return sig / (np.abs(sig).max() + 1e-9)
+
+    def rain(self, t0, t1, vel=0.08, fade=1.5):
+        """雨音（ざーっ＋ぽつぽつ）。"""
+        n = int((t1 - t0) * SR)
+        if n <= 0:
+            return
+        sig = self._noise(n, 800, 9000)
+        tt = np.arange(n) / SR
+        env = np.minimum(1, tt / fade) * np.minimum(1, (t1 - t0 - tt) / fade)
+        st = np.stack([sig, np.roll(sig, 3000)], axis=1) * env[:, None] * vel
+        self._add(self.dry, t0, st.astype(np.float32))
+        t = t0
+        while t < t1:                                    # ぽつぽつ
+            self.music_box(int(self.rng.integers(84, 96)), t, vel=0.05, decay=0.25, pan=self.rng.uniform(-0.8, 0.8))
+            t += self.rng.uniform(0.08, 0.3)
+
+    def birds(self, t0, t1, vel=0.05):
+        """小鳥のさえずり（ちゅんちゅん）。"""
+        t = t0 + self.rng.uniform(0, 0.4)
+        while t < t1:
+            pan = self.rng.uniform(-0.8, 0.8)
+            for k in range(int(self.rng.integers(2, 4))):
+                dur = 0.07
+                tt = np.arange(int(dur * SR)) / SR
+                f0 = self.rng.uniform(3200, 4200)
+                f = f0 * (1 + 0.35 * np.sin(np.pi * tt / dur))
+                ph = 2 * np.pi * np.cumsum(f) / SR
+                sig = np.sin(ph) * np.sin(np.pi * tt / dur) ** 2
+                self._add(self.dry, t + k * 0.11, _pan(sig * vel, pan))
+            t += self.rng.uniform(0.9, 2.2)
+
+    def gust(self, t, dur=2.5, vel=0.2):
+        """風がびゅうっと吹く音。"""
+        n = int(dur * SR)
+        sig = self._noise(n, 200, 2500)
+        tt = np.arange(n) / SR
+        env = np.sin(np.pi * tt / dur) ** 2
+        self._add(self.dry, t, _pan(sig * env * vel, 0.3))
+
+    def boing(self, t, vel=0.25):
+        """ころんだ「ぽよん」。"""
+        dur = 0.35
+        tt = np.arange(int(dur * SR)) / SR
+        f = 300 * (1 + 0.6 * np.exp(-tt * 12) * np.sin(2 * np.pi * 14 * tt))
+        ph = 2 * np.pi * np.cumsum(f) / SR
+        sig = np.sin(ph) * np.exp(-tt * 7)
+        self._add(self.music, t, _pan(sig * vel, 0))
+
+    def pop(self, t, vel=0.2, note="C6"):
+        """花が咲く「ぽんっ」。"""
+        self.music_box(note, t, vel=vel, decay=0.5)
+
+    def chords(self, prog, vel=0.55):
+        """prog = [(開始, 終了, ["C3","E3","G3"]), ...]"""
+        for t0, t1, notes in prog:
+            self.pad(notes, t0, t1, vel=vel)
+
+    def notes(self, seq, vel=0.45, decay=1.8):
+        """seq = [(時刻, "E5"), ...]"""
+        for t, n in seq:
+            self.music_box(n, t, vel=vel, decay=decay, pan=0.15)
+
     # ---------------------------------------------------------- 仕上げ
     def _reverb(self, x, seconds=2.6, wet=0.35):
         n_ir = int(seconds * SR)

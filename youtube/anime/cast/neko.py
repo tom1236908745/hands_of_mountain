@@ -20,11 +20,13 @@ import mascot  # noqa: E402
 FEET = 0.91     # キャンバス上の足の裏の位置（上からの割合）
 KITTEN_GREY = dict(fur=(250, 250, 252), patch_a=(178, 180, 192), patch_b=(112, 114, 126))
 MOTHER_GREY = dict(fur=(246, 246, 248), patch_a=(158, 160, 172), patch_b=(96, 98, 110))
+KURO = dict(fur=(78, 72, 80), patch_a=(62, 58, 66), patch_b=(46, 42, 50), eye=(250, 214, 110),
+            line=(40, 34, 38), ear_in=(196, 150, 150), cheek=(230, 140, 140))     # 大きな黒ねこ「くろ」
 
 
 @lru_cache(maxsize=256)
 def _sprite(expr, px, item, lantern_q, palette_key, blink, flap_q):
-    palette = {"kitten": KITTEN_GREY, "mother": MOTHER_GREY}.get(palette_key)
+    palette = {"kitten": KITTEN_GREY, "mother": MOTHER_GREY, "kuro": KURO}.get(palette_key)
     ss = 2 if px < 500 else 1
     return mascot.draw(expr, px, item=item, lantern=lantern_q / 10, palette=palette, ss=ss, blink=blink,
                        flap=flap_q / 4)
