@@ -38,7 +38,19 @@ PALETTE = {
     "lantern_cap": (70, 58, 56),
 }
 
-LANTERN_CENTER = (500, 808)   # ちょうちんの中心（設計キャンバス座標。アニメで光の位置に使う）
+LANTERN_CENTER = (500, 808)
+FIREFLY_LIGHT = (868, 815)    # ほたる着ぐるみのお尻の光の中心
+
+# ほたる着ぐるみの色（くすみ調にそろえる）
+COSTUME = {
+    "hood": (226, 112, 86),       # 赤橙のフード（ゲンジボタルの胸の色）
+    "hood_hi": (240, 150, 120),
+    "suit": (82, 78, 124),        # 濃紺〜紫のスーツ
+    "suit_hi": (108, 104, 152),
+    "wing": (206, 222, 246),
+    "glow_off": (246, 238, 206),
+    "glow_on": (255, 236, 150),
+}   # ちょうちんの中心（設計キャンバス座標。アニメで光の位置に使う）
 
 SS = 4          # スーパーサンプリング倍率
 BASE = 1000     # 設計キャンバスのサイズ
@@ -203,8 +215,56 @@ def _tail(pen, c, t_wag=0.0):
     pen.line(pts[-6:], c["patch_b"], w - LW * 2)
 
 
-def _body(img, pen, c):
-    _tail(pen, c)
+def _firefly_back(pen, c, level, flap=0.0):
+    """着ぐるみの羽とお尻（体のうしろ）。"""
+    k = COSTUME
+    for sx in (-1, 1):                                   # 半透明の羽（ななめ上に2枚ずつ）
+        for cx, cy, rx, ry, ang, a in ((330, 360, 175, 62, -28 - 22 * flap, 140), (350, 450, 140, 50, -8 - 14 * flap, 110)):
+            pts = []
+            for i in range(40):
+                th = i / 40 * 2 * math.pi
+                x, y = rx * math.cos(th), ry * math.sin(th)
+                r = math.radians(ang)
+                pts.append((500 + sx * (cx + x * math.cos(r) - y * math.sin(r)),
+                            cy + x * math.sin(r) + y * math.cos(r)))
+            pen.polygon(pts, fill=k["wing"] + (a,))
+            pen.line(pts + pts[:1], c["line"] + (110,), 5)
+    # お尻（右うしろに出ている）
+    pen.ellipse(820, 790, 120, 100, fill=k["suit"], outline=c["line"], width=LW)
+    for dx in (-40, 0):
+        pen.line([(800 + dx, 715), (835 + dx, 865)], k["suit_hi"], 14)
+    x, y = FIREFLY_LIGHT
+    col = tuple(int(a + (b - a) * min(1, level)) for a, b in zip(k["glow_off"], k["glow_on"]))
+    pen.ellipse(x, y, 78, 70, fill=col, outline=c["line"], width=LW - 2)
+    pen.ellipse(x - 22, y - 24, 22, 14, fill=(255, 255, 255, 170))
+
+
+def _firefly_front(img, pen, c, layer_mask):
+    """着ぐるみのフード・スーツ・しょっかく（体の形で切り抜く）。"""
+    k = COSTUME
+    cos = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    cp = type(pen)(cos, pen.s)
+    cp.ellipse(500, 330, 380, 160, fill=k["hood"])         # フード
+    cp.ellipse(420, 300, 120, 40, fill=k["hood_hi"])
+    cp.ellipse(500, 1010, 470, 290, fill=k["suit"])       # スーツ（首から下）
+    cp.ellipse(500, 735, 150, 20, fill=k["suit_hi"])
+    # ふちの線も同じ層に描いて、体の形で切り抜く（はみ出さない）
+    cp.arc(500, 330, 380, 160, 0, 180, c["line"], 9)
+    cp.arc(500, 1010, 470, 290, 180, 360, c["line"], 9)
+    cos.putalpha(ImageChops.multiply(cos.getchannel("A"), layer_mask))
+    img.alpha_composite(cos)
+    # しょっかく
+    for sx in (-1, 1):
+        pts = _qbez((500 + sx * 60, 375), (500 + sx * 70, 250), (500 + sx * 150, 215), 12)
+        pen.line(pts, c["line"], 14)
+        pen.circle(500 + sx * 150, 215, 22, fill=k["suit"], outline=c["line"], width=8)
+
+
+def _body(img, pen, c, costume=False, glow=0.0, flap=0.0):
+    if costume:
+        _firefly_back(pen, c, glow, flap)
+    else:
+        _tail(pen, c)
     # 耳（体の後ろ）
     for sx, fill in ((-1, c["patch_a"]), (1, c["patch_b"])):
         ear = _ear_pts(sx)
@@ -227,6 +287,8 @@ def _body(img, pen, c):
     pat.putalpha(ImageChops.multiply(pat.getchannel("A"), layer.getchannel("A")))
     layer.alpha_composite(pat)
     img.alpha_composite(layer)
+    if costume:
+        _firefly_front(img, pen, c, layer.getchannel("A"))
     _outline(pen, shape, c, seed=1.3)
 
 
@@ -396,14 +458,15 @@ def _eye_squeeze(pen, c, center, side):     # ＞＜
 # ---- 公開API ------------------------------------------------------------------
 def draw(expression: str = "normal", size: int = 512, talking: bool = False,
          blink: bool = False, palette: dict | None = None, item: str | None = None,
-         lantern: float = 0.0, ss: int | None = None) -> Image.Image:
+         lantern: float = 0.0, ss: int | None = None, flap: float = 0.0) -> Image.Image:
     """キャラを描いた RGBA 画像（正方形・背景透明）を返す。
 
     expression: EXPRESSIONS のいずれか
     talking   : 口を開ける（口パク用）
     blink     : 目を閉じる（まばたき用）
-    item      : "book" で ことば帖 を持つ / "lantern" でちょうちんを持つ
-    lantern   : ちょうちんの明るさ 0〜1
+    item      : "book" で ことば帖 / "lantern" でちょうちん / "firefly" でほたるの着ぐるみ
+    lantern   : ちょうちん・着ぐるみのお尻の明るさ 0〜1
+    flap      : 着ぐるみの羽のはばたき -1〜1
     ss        : 内部の拡大倍率（省略時 4。アニメで大きく描くときは 1〜2 にして速くする）
     """
     if expression not in EXPRESSIONS:
@@ -420,7 +483,7 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
 
     if e == "satori":
         _halo(img, pen, c)
-    _body(img, pen, c)
+    _body(img, pen, c, costume=(item == "firefly"), glow=lantern, flap=flap)
     if item == "book":
         _book(pen, c)
     elif item == "lantern":

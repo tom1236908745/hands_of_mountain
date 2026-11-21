@@ -60,6 +60,7 @@
 | `strain` | がんばる・力む（＞＜・ぷくっとほっぺ） |
 | `calm` | おだやかに目を閉じる・祈る・寄り添う |
 
-`item="book"` で ことば帖、`item="lantern"` でちょうちんを持たせられる（`lantern=0〜1` で灯りの明るさ）。
+`item="book"` で ことば帖、`item="lantern"` でちょうちん、`item="firefly"` で**ほたるの着ぐるみ**（ほたるにゃん）。
+`lantern=0〜1` で灯り／お尻の明るさ、`flap=-1〜1` で着ぐるみの羽のはばたき。
 アニメでは `anime/cast/neko.py` から使う。
 表情を増やすときは `tools/mascot.py` の `EXPRESSIONS` に名前を足し、`draw()` に分岐を追加します。

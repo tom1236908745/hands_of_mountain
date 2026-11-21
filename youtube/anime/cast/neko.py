@@ -23,18 +23,19 @@ MOTHER_GREY = dict(fur=(246, 246, 248), patch_a=(158, 160, 172), patch_b=(96, 98
 
 
 @lru_cache(maxsize=256)
-def _sprite(expr, px, item, lantern_q, palette_key, blink):
+def _sprite(expr, px, item, lantern_q, palette_key, blink, flap_q):
     palette = {"kitten": KITTEN_GREY, "mother": MOTHER_GREY}.get(palette_key)
     ss = 2 if px < 500 else 1
-    return mascot.draw(expr, px, item=item, lantern=lantern_q / 10, palette=palette, ss=ss, blink=blink)
+    return mascot.draw(expr, px, item=item, lantern=lantern_q / 10, palette=palette, ss=ss, blink=blink,
+                       flap=flap_q / 4)
 
 
 def draw(fr, x, ground, size, expr="normal", *, item=None, lantern=0.0, palette=None, flip=False,
-         squash=1.0, rot=0.0, alpha=1.0, blink=False):
-    """猫を貼る。戻り値は ちょうちんの中心（ワールド座標）。"""
+         squash=1.0, rot=0.0, alpha=1.0, blink=False, flap=0.0):
+    """猫を貼る。戻り値は 光の中心（ちょうちん／着ぐるみのお尻）のワールド座標。"""
     view = fr.view()
     px = max(16, int(round(size * view.zoom / 8)) * 8)       # 8px 刻みでキャッシュ
-    img = _sprite(expr, px, item, int(round(lantern * 10)), palette, blink)
+    img = _sprite(expr, px, item, int(round(lantern * 10)), palette, blink, int(round(flap * 4)))
     if flip:
         img = img.transpose(Image.FLIP_LEFT_RIGHT)
     w = int(px * (1 + (1 - squash) * 0.6))
@@ -52,7 +53,7 @@ def draw(fr, x, ground, size, expr="normal", *, item=None, lantern=0.0, palette=
     top = int(sy - img.height * FEET)
     fr.base_img.paste(img, (left, top), img)
 
-    lx, ly = mascot.LANTERN_CENTER
+    lx, ly = mascot.FIREFLY_LIGHT if item == "firefly" else mascot.LANTERN_CENTER
     k = size / 1000
     wx = x + (lx - 500) * k * (-1 if flip else 1) * (1 + (1 - squash) * 0.6)
     wy = ground - size * squash * FEET + ly * k * squash
