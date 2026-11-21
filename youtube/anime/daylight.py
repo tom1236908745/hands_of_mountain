@@ -187,7 +187,8 @@ def grass(fr, t, th, parallax=1.25):
 
 
 # ---------------------------------------------------------------- 天気
-def rain(fr, t, amount=1.0, seed=9):
+def rain(fr, t, amount=1.0, seed=9, shelter=None):
+    """shelter=(x0, x1, y) の範囲（傘の下）には雨を降らせない。"""
     if amount <= 0.01:
         return
     cv = fr.base(parallax=1.0)
@@ -203,6 +204,8 @@ def rain(fr, t, amount=1.0, seed=9):
         x = cx - w / 2 + x0 * w - u * 60 / z
         y = cy - h / 2 + u * h * 1.1
         ln = 46 / z ** 0.5
+        if shelter and shelter[0] < x < shelter[1] and y > shelter[2]:
+            continue
         cv.line([(x, y), (x - ln * 0.25, y + ln)], (210, 226, 240, int(150 * amount)), max(1.5, 3 / z ** 0.3))
 
 
