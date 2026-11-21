@@ -88,6 +88,8 @@ def main():
     ap.add_argument("--range", help="開始,終了（秒）")
     ap.add_argument("--audio-only", action="store_true")
     ap.add_argument("--workers", type=int)
+    ap.add_argument("--sound", help="音色スタイル（musicbox/piano/marimba/guitar/koto/lofi/chiptune）。"
+                                     "省略時は meta.yaml の sound:、それもなければ musicbox")
     args = ap.parse_args()
 
     ep_dir = HERE / "episodes" / args.episode
@@ -108,8 +110,13 @@ def main():
 
     audio = out_dir / "audio.wav"
     score_path = ep_dir / "score.py"
+    import audio as audio_mod
+    meta_sound = None
+    if (ep_dir / "meta.yaml").exists():
+        meta_sound = (yaml.safe_load((ep_dir / "meta.yaml").read_text(encoding="utf-8")) or {}).get("sound")
+    audio_mod.STYLE = args.sound or meta_sound or "musicbox"
     if score_path.exists():
-        print("♪ 音楽を合成中…")
+        print(f"♪ 音楽を合成中…（音色：{audio_mod.STYLES[audio_mod.STYLE]['label']}）")
         load(score_path, "score").build().write(audio)
         print(f"  → {audio}")
     else:

@@ -38,8 +38,22 @@ def _pan(sig, pan):
     return np.stack([sig * l, sig * r], axis=1)
 
 
+# ---- 音色スタイル（曲はそのまま、楽器の音色だけ切りかえる） ----------------------
+STYLES = {
+    "musicbox": dict(inst="musicbox", pad="pad", reverb=0.35, label="オルゴール"),
+    "piano": dict(inst="piano", pad="pad", reverb=0.3, label="ピアノ"),
+    "marimba": dict(inst="marimba", pad="pad", reverb=0.28, label="マリンバ"),
+    "guitar": dict(inst="guitar", pad="strings", reverb=0.25, label="アコースティックギター"),
+    "koto": dict(inst="koto", pad="soft", reverb=0.4, label="琴（和風）"),
+    "lofi": dict(inst="epiano", pad="warm", reverb=0.22, lofi=True, label="ローファイ"),
+    "chiptune": dict(inst="chip", pad="triangle", reverb=0.12, label="8ビット"),
+}
+STYLE = "musicbox"          # make.py の --sound や meta.yaml の sound: で切りかえる
+
+
 class Mix:
     def __init__(self, duration: float, seed=1):
+        self.style = dict(STYLES[STYLE])
         self.n = int(duration * SR) + SR
         self.duration = duration
         self.music = np.zeros((self.n, 2), np.float32)   # リバーブをかけるバス
@@ -55,6 +69,87 @@ class Mix:
 
     # ---------------------------------------------------------- 楽器
     def music_box(self, note, t, vel=0.6, decay=1.6, pan=0.0):
+        """メロディの1音。音色は self.style["inst"] で決まる（既定はオルゴール）。"""
+        inst = self.style["inst"]
+        if inst == "musicbox":
+            return self._bell(note, t, vel, decay, pan)
+        f = hz(note)
+        sig = {"piano": self._piano, "marimba": self._marimba, "guitar": self._guitar, "koto": self._koto,
+               "epiano": self._epiano, "chip": self._chip}[inst](f, decay)
+        st = _pan(sig * vel * 0.22, pan)
+        if inst == "epiano":                                 # 左右にゆれるトレモロ
+            tt = np.arange(len(sig)) / SR
+            lfo = 0.5 + 0.5 * np.sin(2 * np.pi * 4.2 * tt)
+            st[:, 0] *= 0.6 + 0.4 * lfo
+            st[:, 1] *= 0.6 + 0.4 * (1 - lfo)
+        self._add(self.music, t, st.astype(np.float32))
+
+    # ---- 音色ごとの1音（モノラルの波形を返す）
+    def _env_t(self, dur):
+        return np.arange(int(dur * SR)) / SR
+
+    def _piano(self, f, decay):
+        tt = self._env_t(min(5.0, decay * 2.6 + 0.6))
+        sig = np.zeros_like(tt)
+        for n in range(1, 11):
+            fn = f * n * np.sqrt(1 + 0.0004 * n * n)
+            if fn >= SR / 2:
+                break
+            sig += (1 / n ** 1.4) * np.sin(2 * np.pi * fn * tt) * np.exp(-tt * (0.5 + 0.35 * n) / max(0.6, decay))
+        sig *= np.minimum(1, tt / 0.004) * (0.55 + 0.45 * np.exp(-tt * 6))
+        return sig * 0.9
+
+    def _marimba(self, f, decay):
+        tt = self._env_t(1.4)
+        sig = (np.sin(2 * np.pi * f * tt) * np.exp(-tt * 3.2)
+               + 0.35 * np.sin(2 * np.pi * f * 3.93 * tt) * np.exp(-tt * 9)
+               + 0.12 * np.sin(2 * np.pi * f * 9.2 * tt) * np.exp(-tt * 20))
+        sig += 0.25 * np.sin(2 * np.pi * f * 0.5 * tt) * np.exp(-tt * 25)       # 木をたたく感じ
+        return sig * np.minimum(1, tt / 0.0015) * 1.1
+
+    def _ks(self, f, dur, bright=0.5, rho=0.996, os=4):
+        """カープラス・ストロング（弦をはじいた音）。os 倍で計算して音程を正確に。"""
+        sr = SR * os
+        N = max(2, int(round(sr / f)))
+        total = int(dur * sr)
+        burst = self.rng.standard_normal(N)
+        burst = np.convolve(burst, np.ones(3) / 3, mode="same")
+        out = np.zeros(total + N)
+        out[:N] = burst
+        pos = N
+        while pos < total:
+            L = min(N, total - pos)
+            a = out[pos - N:pos - N + L]
+            b = out[pos - N - 1:pos - N - 1 + L] if pos - N - 1 >= 0 else np.concatenate(([0.0], a[:-1]))
+            out[pos:pos + L] = rho * (bright * a + (1 - bright) * b)
+            pos += L
+        sig = out[:total].reshape(-1, os).mean(axis=1)
+        return sig / (np.abs(sig).max() + 1e-9)
+
+    def _guitar(self, f, decay):
+        sig = self._ks(f, min(3.5, decay * 2 + 0.5), bright=0.5, rho=0.9965)
+        return sig * 0.8
+
+    def _koto(self, f, decay):
+        sig = self._ks(f, min(4.0, decay * 2.2 + 0.8), bright=0.72, rho=0.998)
+        tt = self._env_t(len(sig) / SR)[:len(sig)]
+        sig = sig * (1 + 0.06 * np.sin(2 * np.pi * 5.5 * tt) * np.clip((tt - 0.4) / 0.6, 0, 1))  # 余韻のゆれ
+        return sig * 0.75
+
+    def _epiano(self, f, decay):
+        tt = self._env_t(min(4.0, decay * 2 + 0.6))
+        idx = 2.2 * np.exp(-tt * 3.5) + 0.25
+        sig = np.sin(2 * np.pi * f * tt + idx * np.sin(2 * np.pi * f * tt))
+        sig += 0.15 * np.sin(2 * np.pi * f * 14 * tt) * np.exp(-tt * 30)        # 金属のティン
+        return sig * np.exp(-tt * 1.1 / max(0.8, decay)) * np.minimum(1, tt / 0.003) * 0.8
+
+    def _chip(self, f, decay):
+        tt = self._env_t(min(1.6, decay * 0.8 + 0.2))
+        ph = np.cumsum(f * (1 + 0.004 * np.sin(2 * np.pi * 6 * tt))) / SR % 1.0   # ビブラート（音程はずれない）
+        sig = np.where(ph < 0.25, 1.0, -1.0)
+        return sig * np.exp(-tt * 2.6) * np.minimum(1, tt / 0.002) * 0.45
+
+    def _bell(self, note, t, vel=0.6, decay=1.6, pan=0.0):
         """オルゴール（ベル）の音。倍音を少しずらすと金属っぽくなる。"""
         f = hz(note)
         dur = decay * 3
@@ -74,14 +169,24 @@ class Mix:
         env = np.minimum(1, tt / attack) * np.clip((t1 - t0 + release - tt) / release, 0, 1)
         env = np.where(tt < t1 - t0, np.minimum(1, tt / attack), env)
         out = np.zeros((len(tt), 2), np.float32)
+        kind = self.style["pad"]
+        gain = {"pad": 1.0, "strings": 0.8, "soft": 0.55, "warm": 1.0, "triangle": 0.7}[kind]
         for k, note in enumerate(notes):
             f = hz(note)
             for det, pan in ((-0.004, -0.5), (0.0, 0.0), (0.004, 0.5)):
                 ph = self.rng.uniform(0, 6.28)
-                s = np.sin(2 * np.pi * f * (1 + det) * tt + ph) + bright * np.sin(4 * np.pi * f * (1 + det) * tt)
+                w = 2 * np.pi * f * (1 + det) * tt + ph
+                if kind == "strings":                      # 弦楽器っぽい（倍音多め）
+                    s = sum(np.sin(w * n) / n for n in range(1, 7))
+                elif kind == "triangle":                   # 三角波（8ビット）
+                    s = sum(((-1) ** ((n - 1) // 2)) * np.sin(w * n) / (n * n) for n in (1, 3, 5, 7))
+                elif kind == "warm":                       # ゆらぐ（テープ風）
+                    s = np.sin(w + 0.6 * np.sin(2 * np.pi * 0.5 * tt)) + 0.15 * np.sin(2 * w)
+                else:
+                    s = np.sin(w) + bright * np.sin(2 * w)
                 s *= 1 + 0.15 * np.sin(2 * np.pi * 0.3 * tt + k)
                 out += _pan(s, pan)
-        out *= (env * vel * 0.03 / max(1, len(notes) ** 0.5))[:, None]
+        out *= (env * vel * 0.03 * gain / max(1, len(notes) ** 0.5))[:, None]
         self._add(self.music, t0, out)
 
     def arpeggio(self, notes, t0, step, vel=0.5, decay=1.2, pan_spread=0.6):
@@ -168,7 +273,7 @@ class Mix:
         self._add(self.dry, t0, st.astype(np.float32))
         t = t0
         while t < t1:                                    # ぽつぽつ
-            self.music_box(int(self.rng.integers(84, 96)), t, vel=0.05, decay=0.25, pan=self.rng.uniform(-0.8, 0.8))
+            self._bell(int(self.rng.integers(84, 96)), t, vel=0.05, decay=0.25, pan=self.rng.uniform(-0.8, 0.8))
             t += self.rng.uniform(0.08, 0.3)
 
     def birds(self, t0, t1, vel=0.05):
@@ -233,8 +338,42 @@ class Mix:
             out[:, ch] = y
         return x * (1 - wet) + out * wet * 2.2
 
+    def _lofi(self, music):
+        """ローファイ：こもらせる＋やさしいドラム＋レコードのぷちぷち。"""
+        n = len(music)
+        spec = np.fft.rfft(music, axis=0)
+        fr = np.fft.rfftfreq(n, 1 / SR)
+        spec *= (1 / (1 + (fr / 4200) ** 4))[:, None]
+        music = np.fft.irfft(spec, n, axis=0).astype(np.float32)
+        beat = 60 / 76
+        t, i = 1.5, 0
+        while t < self.duration - 3.5:
+            k = i % 4
+            if k in (0, 2):                                   # キック
+                tt = self._env_t(0.35)
+                f = 50 + 70 * np.exp(-tt * 30)
+                kick = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 9)
+                self._add(self.dry, t, _pan(kick * 0.32, 0))
+            if k in (1, 3):                                   # スネア（ブラシ風）
+                sn = self._noise(int(0.18 * SR), 1200, 6000) * np.exp(-self._env_t(0.18) * 22)
+                self._add(self.dry, t, _pan(sn * 0.12, 0.1))
+            for h in (0, 0.5):                                # ハイハット
+                hh = self._noise(int(0.05 * SR), 6000, 14000) * np.exp(-self._env_t(0.05) * 70)
+                self._add(self.dry, t + h * beat, _pan(hh * 0.05, -0.3))
+            t += beat
+            i += 1
+        crackle = np.zeros(self.n)                            # ぷちぷち
+        idx = self.rng.integers(0, self.n, int(self.duration * 9))
+        crackle[idx] = self.rng.uniform(-0.25, 0.25, len(idx))
+        crackle += self._noise(self.n, 300, 3000) * 0.012
+        self.dry += np.stack([crackle, crackle], axis=1).astype(np.float32) * 0.6
+        return music
+
     def render(self, fade_out=2.0):
-        music = self._reverb(self.music)
+        music = self.music
+        if self.style.get("lofi"):
+            music = self._lofi(music)
+        music = self._reverb(music, wet=self.style.get("reverb", 0.35))
         mix = music + self.dry
         n = int(self.duration * SR)
         mix = mix[:n]
