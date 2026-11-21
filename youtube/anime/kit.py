@@ -58,3 +58,36 @@ def ending(t0, word, source, after, reading=None, after_t=None, end=37.6):
     for i, line in enumerate(after):
         caps.append(Caption(after_t + i * 1.0, end, line, size=50, y=0.27 + i * 0.06, fade_out=0.9))
     return caps
+
+
+def speech_bubble(img, cam_xyz, size, wx, wy, text, alpha=1.0, fsize=40, dx=0.0):
+    """完成した画像に吹き出しを描く。wx, wy = 話している口のあたり（ワールド座標）。
+    dx（ワールド座標）だけ横にずらして置き、しっぽは話し手を向く（字幕と重ならないように）。"""
+    from PIL import Image, ImageDraw
+    from engine import GOTHIC, font
+    if alpha <= 0.01:
+        return img
+    cx, cy, z = cam_xyz
+    W, H = size
+    ax, ay = (wx - cx) * z + W / 2, (wy - cy) * z + H / 2          # しっぽの先
+    sx, sy = ax + dx * z, ay - fsize * 1.2                           # 吹き出しの中心
+    f = font(GOTHIC, fsize)
+    tw = f.getlength(text)
+    pad = fsize * 0.55
+    half = tw / 2 + pad
+    sx = min(max(sx, half + 24), W - half - 24)                     # 画面からはみ出さない
+    box = (sx - half, sy - fsize / 2 - pad, sx + half, sy + fsize / 2 + pad)
+    lay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    bx = min(max(ax, box[0] + 30), box[2] - 30)                      # しっぽの付け根
+    d.rounded_rectangle((box[0], box[1] + 6, box[2], box[3] + 6), radius=fsize * 0.6, fill=(0, 0, 0, 50))
+    d.polygon([(bx - 14, box[3] - 4), (bx + 14, box[3] - 4), (ax, ay)], fill=(255, 255, 255, 240),
+              outline=(104, 82, 74, 255))
+    d.rounded_rectangle(box, radius=fsize * 0.6, fill=(255, 255, 255, 240), outline=(104, 82, 74, 255), width=4)
+    d.polygon([(bx - 11, box[3] - 6), (bx + 11, box[3] - 6), (bx, box[3] + 2)], fill=(255, 255, 255, 240))
+    d.text((sx - tw / 2, sy - fsize * 0.62), text, font=f, fill=(84, 62, 54, 255))
+    if alpha < 1:
+        lay.putalpha(lay.getchannel("A").point(lambda v: int(v * alpha)))
+    out = img.convert("RGBA")
+    out.alpha_composite(lay)
+    return out.convert("RGB")
