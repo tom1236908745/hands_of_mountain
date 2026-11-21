@@ -113,6 +113,103 @@ def text_glow(img, xy, text, f, fill, glow=(255, 220, 150, 120), anchor="ls"):
     ImageDraw.Draw(img).text(xy, text, font=f, fill=fill, anchor=anchor)
 
 
+MINCHO = ROOT / "assets" / "fonts" / "ShipporiMinchoB1-ExtraBold.ttf"
+# 短冊にする「古いことば」（シリーズの色 = config.yaml の categories）
+CARDS = [("一隅を照らす", "buddhism"), ("目から鱗", "christian"), ("塞翁が馬", "kotowaza")]
+SKY_WORDS = ["諸行無常", "一期一会", "狭き門", "地の塩", "蛍雪の功", "井の中の蛙", "和顔愛語", "温故知新", "自灯明",
+             "求めよ", "一粒の麦", "雨垂れ"]
+
+
+def mincho(size):
+    from PIL import ImageFont
+    return ImageFont.truetype(str(MINCHO), size)
+
+
+def vertical_text(d, x, y_top, text, f, fill, gap=1.08):
+    """縦書き（1文字ずつ下へ）。"""
+    y = y_top
+    for ch in text:
+        w = f.getlength(ch)
+        d.text((x - w / 2, y), ch, font=f, fill=fill)
+        y += f.size * gap
+
+
+def tanzaku(text, cat_key, h=330, w=88, fsize=46):
+    """光る短冊（上にシリーズの色の帯）。回転して貼れるよう RGBA で返す。"""
+    col = tuple(config()["categories"][cat_key]["color"])
+    pad = 40
+    im = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
+    glow = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).rounded_rectangle((pad - 8, pad - 8, pad + w + 8, pad + h + 8), 18, fill=GLOW + (150,))
+    im.alpha_composite(glow.filter(ImageFilter.GaussianBlur(18)))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((pad, pad, pad + w, pad + h), 10, fill=(252, 246, 230), outline=(104, 82, 74), width=4)
+    d.rounded_rectangle((pad, pad, pad + w, pad + 34), 10, fill=col)
+    d.rectangle((pad, pad + 20, pad + w, pad + 34), fill=col)
+    d.ellipse((pad + w / 2 - 7, pad + 10, pad + w / 2 + 7, pad + 24), fill=(252, 246, 230))   # ひも穴
+    f = mincho(fsize)
+    th = len(text) * fsize * 1.08
+    vertical_text(d, pad + w / 2, pad + 34 + (h - 34 - th) / 2, text, f, (58, 44, 40))
+    return im
+
+
+def open_book(img, cx, cy, wdt=270):
+    """開いたことば帖（ページが光っている）。"""
+    halo = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(halo).ellipse((cx - 240, cy - 150, cx + 240, cy + 120), fill=GLOW + (80,))
+    img.alpha_composite(halo.filter(ImageFilter.GaussianBlur(70)))
+    d = ImageDraw.Draw(img)
+    hw, hh = wdt / 2, wdt * 0.36
+    line = (104, 82, 74)
+    cover = (126, 158, 182)
+    d.polygon([(cx - hw - 10, cy - hh + 14), (cx, cy - hh + 26), (cx + hw + 10, cy - hh + 14),
+               (cx + hw + 10, cy + hh * 0.55 + 10), (cx, cy + hh * 0.55 + 24), (cx - hw - 10, cy + hh * 0.55 + 10)],
+              fill=cover, outline=line, width=5)
+    for sx in (-1, 1):
+        pts = [(cx, cy - hh + 22), (cx + sx * hw, cy - hh), (cx + sx * hw, cy + hh * 0.55), (cx, cy + hh * 0.55 + 16)]
+        d.polygon(pts, fill=(255, 250, 232), outline=line)
+        for k in range(4):
+            yy = cy - hh * 0.62 + k * 22
+            d.line([(cx + sx * 22, yy + 6), (cx + sx * (hw - 26), yy)], fill=(200, 184, 160), width=4)
+    d.line([(cx, cy - hh + 22), (cx, cy + hh * 0.55 + 16)], fill=line, width=4)
+    # 前足（本のふちを持つ）
+    for sx in (-1, 1):
+        px = cx + sx * (hw - 4)
+        d.ellipse((px - 30, cy + 2, px + 30, cy + 48), fill=(255, 250, 242), outline=line, width=5)
+
+
+def word_stream(img, rnd, p0, p1, n=60):
+    """本から短冊へ、光のつぶが立ちのぼる。"""
+    pts = []
+    for i in range(n):
+        u = i / n
+        cx = p0[0] + (p1[0] - p0[0]) * u
+        cy = p0[1] + (p1[1] - p0[1]) * u - math.sin(u * math.pi) * 160
+        pts.append((cx + rnd.uniform(-26, 26), cy + rnd.uniform(-22, 22), rnd.uniform(2.5, 6), rnd.uniform(0.4, 1)))
+    big = [(x, y, r * 4, a * 0.3) for x, y, r, a in pts]
+    b, _ = glow_layer(img.size, big)
+    img.alpha_composite(b)
+    _, core = glow_layer(img.size, pts)
+    img.alpha_composite(core.filter(ImageFilter.GaussianBlur(1.2)))
+
+
+def sky_words(img, rnd):
+    """夜空にうっすら浮かぶ古いことば（PC・TV で見える部分）。"""
+    lay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    spots = [(170, 120), (420, 300), (700, 90), (980, 260), (1260, 110), (1540, 300), (1820, 120), (2100, 280),
+             (2390, 110), (190, 560), (2380, 560), (300, 760)]
+    for (x, y), w in zip(spots, SKY_WORDS):
+        f = mincho(int(rnd.uniform(38, 50)))
+        x += rnd.uniform(-30, 30)
+        if SAFE[0] - 60 < x < SAFE[2] + 60:              # スマホの範囲には入れない
+            y = min(y, SAFE[1] - 40 - len(w) * f.size * 1.08)
+        vertical_text(d, x, y, w, f, (236, 226, 196, int(rnd.uniform(70, 110))))
+    g = lay.filter(ImageFilter.GaussianBlur(6))
+    img.alpha_composite(g)
+    img.alpha_composite(lay)
+
+
 def banner(title, tagline, with_text=True):
     rnd = random.Random(8)
     img = gradient(W, H, SKY_TOP, SKY_BOT)
@@ -120,35 +217,41 @@ def banner(title, tagline, with_text=True):
     for _ in range(420):                                  # 星
         x, y, r = rnd.uniform(0, W), rnd.uniform(0, 900), rnd.uniform(1.2, 3.2)
         d.ellipse((x - r, y - r, x + r, y + r), fill=(230, 236, 255, int(rnd.uniform(120, 255))))
+    sky_words(img, rnd)
     moon(img, 2230, 640, 92)
     trees(img, rnd)
-    fireflies(img, rnd, 70, (0, 120, W, 1000))
-    fireflies(img, rnd, 26, (SAFE[0], SAFE[1], SAFE[2], SAFE[3] - 40), 5, 10)
+    fireflies(img, rnd, 30, (0, 120, W, 1000))
 
-    # ほたるにゃん（光っている）＋ 子ねこ
+    # ことにゃん：ことば帖をひらく
     cs = 470
-    cx, foot = 760, 920
-    halo = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    lx = cx + (mascot.FIREFLY_LIGHT[0] - 500) / 1000 * cs
-    ly = foot - cs * 0.91 + mascot.FIREFLY_LIGHT[1] / 1000 * cs
-    ImageDraw.Draw(halo).ellipse((lx - 230, ly - 230, lx + 230, ly + 230), fill=GLOW + (90,))
-    img.alpha_composite(halo.filter(ImageFilter.GaussianBlur(90)))
-    cat = mascot.draw("happy", cs, item="firefly", lantern=1.0, flap=0.3)
+    cx, foot = 720, 900
+    cat = mascot.draw("happy", cs)
     img.alpha_composite(cat, (int(cx - cs / 2), int(foot - cs * 0.91)))
-    ks = 230
-    kit = mascot.draw("calm", ks, palette=dict(fur=(250, 250, 252), patch_a=(178, 180, 192), patch_b=(112, 114, 126)))
-    img.alpha_composite(kit, (int(cx + 305 - ks / 2), int(foot + 6 - ks * 0.91)))
-    core = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(core).ellipse((lx - 40, ly - 36, lx + 40, ly + 36), fill=(255, 250, 220, 150))
-    img.alpha_composite(core.filter(ImageFilter.GaussianBlur(14)))
+    open_book(img, cx, foot - 22, wdt=210)              # 顔が隠れないよう、胸の下で小さく開く
+
+    # 光る短冊（ことばが本から立ちのぼって、短冊になる）
+    card_x = [1760, 1862, 1962] if with_text else [1300, 1420, 1540]
+    card_y = [585, 560, 600]
+    word_stream(img, rnd, (cx + 30, foot - 60), (card_x[0] - 40, card_y[0] + 120))
+    for (text, key), x, y, rot in zip(CARDS, card_x, card_y, (-6, 3, 8)):
+        fs = 38
+        t = tanzaku(text, key, h=int(34 + len(text) * fs * 1.08 + 34), fsize=fs).rotate(
+            rot, resample=Image.BICUBIC, expand=True)
+        img.alpha_composite(t, (int(x - t.width / 2), int(y - 40)))
 
     if with_text:
-        tx = 1235
-        tf = font(118)
-        while tf.getlength(title) > SAFE[2] - tx - 20 and tf.size > 50:
-            tf = font(tf.size - 4)
-        text_glow(img, (tx, 735), title, tf, (255, 252, 240))
-        text_glow(img, (tx + 4, 830), tagline, font(54, bold=False), (255, 226, 150), glow=(255, 220, 150, 60))
+        tx = 960
+        tf = mincho(96)
+        while tf.getlength(title) > 1720 - tx and tf.size > 50:
+            tf = mincho(tf.size - 2)
+        text_glow(img, (tx, 700), title, tf, (255, 252, 240))
+        sf = font(36, bold=False)
+        while sf.getlength(tagline) > 1730 - tx and sf.size > 22:
+            sf = font(sf.size - 1)
+        text_glow(img, (tx + 4, 790), tagline, sf, (255, 226, 150), glow=(255, 220, 150, 50))
+        bf = font(30, bold=False)
+        series = "仏教のことば ・ 聖書のことば ・ 故事成語"
+        text_glow(img, (tx + 4, 852), series, bf, (210, 222, 236), glow=(180, 200, 230, 30))
     return img.convert("RGB")
 
 
@@ -182,7 +285,7 @@ def main():
     ch = config()["channel"]
     ap = argparse.ArgumentParser()
     ap.add_argument("--title", default=ch["name"])
-    ap.add_argument("--tagline", default="古いことばを、小さな物語アニメで。")
+    ap.add_argument("--tagline", default="むかしから伝わることばを、小さな物語アニメで。")
     args = ap.parse_args()
     out = ROOT / "output" / "channel"
     out.mkdir(parents=True, exist_ok=True)
