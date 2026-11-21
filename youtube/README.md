@@ -28,6 +28,7 @@
 | `python tools/stamps.py --sheet` | LINEスタンプ一式＋申請用 zip |
 | `python tools/stamps.py --hires 3000` | グッズ用 3000px キャラ画像（全表情） |
 | `python tools/export_character.py` | キャラ画像を1枚ずつ（白背景・全表情＋ことば帖/ちょうちん/ほたるにゃん）。`--transparent` で透過、`--size` で大きさ |
+| `python tools/make_banner.py` | YouTube のバナー（2560x1440）とアイコン（800x800）。`--title` で文字を変更 |
 | `python tools/new_episode.py <slug>` | 新しい台本ファイルを番号つきで作成 |
 
 出力はすべて `output/` に入ります（git 管理外）。
