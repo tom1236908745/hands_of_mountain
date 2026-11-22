@@ -29,6 +29,7 @@ description: 仏教・聖書・故事成語などの「ことば」を題材に�
      キャラが小さすぎ/切れていないか・字幕が読めるか・暗すぎ/白飛びしていないか・spec どおりの演技か。
    - 気になる区間は `--range 開始,終了` で動きを確認する。
    - 「フォントにない文字」の警告が出たら字幕の文字を置き換える。
+   - 字幕は `engine.draw_captions` が自動で画面内（左右70px内側）に収める（少し長ければ縮小、長ければ「、」や空白で改行）。それでも読みにくい長さなら、字幕の文を短くする。
 4. **書き出し**: `python anime/make.py <ep>` → `output/anime/<ep>/` に video.mp4・cover.png・post.txt。
    - 書き出した動画から `ffmpeg -vf "select='not(mod(n\,45))',scale=216:384,tile=9x3"` で一覧画像を作り、通しで確認する。
 5. **記録**: `youtube/構成メモ.md` のネタ帳を更新し、spec.md・story.py・score.py・meta.yaml をコミットする（output/ はコミットしない）。

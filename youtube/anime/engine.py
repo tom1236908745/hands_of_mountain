@@ -375,6 +375,51 @@ class Caption:
     rise: float = 22
 
 
+CAPTION_MARGIN = 70          # 字幕の左右の余白（px）。この内側に必ず収める
+_NO_START = set("、。，．・：；？！ー」』）…‥ぁぃぅぇぉっゃゅょゎァィゥェォッャュョ!?)")
+
+
+def _split_line(line, f, max_w):
+    """1行を2つ以上に分ける。「、」「。」や空白のあとで切れるなら必ずそこで切り（いちばんバランスのよい所）、
+    なければ「」の中や小さい文字の前を避けて切る。"""
+    if f.getlength(line) <= max_w or len(line) < 2:
+        return [line]
+    cands = []
+    depth = 0
+    for i in range(1, len(line)):
+        ch = line[i - 1]
+        depth += (ch in "「『（") - (ch in "」』）")
+        a, b = line[:i].rstrip(), line[i:].lstrip()
+        if not a or not b or b[0] in _NO_START:
+            continue
+        rank = 0 if ch in "、。，！？ 　" else (1 if ch in "」』" else 2)
+        wa, wb = f.getlength(a), f.getlength(b)
+        cands.append((rank, depth > 0, max(wa, wb) > max_w, abs(wa - wb), a, b))
+    if not cands or (min(c[0] for c in cands) == 2 and f.getlength(line) <= max_w / 0.8):
+        return [line]          # 自然な切れ目がなく、少しの縮小で収まるなら切らない（呼び出し側で縮小）
+    cands.sort(key=lambda c: c[:4])
+    _, _, _, _, a, b = cands[0]
+    return _split_line(a, f, max_w) + _split_line(b, f, max_w)
+
+
+def fit_caption(text, font_name, size, max_w):
+    """字幕が max_w に収まるよう、少しだけ小さくするか、改行する。戻り値 (行のリスト, 文字サイズ)。"""
+    lines = text.split("\n")
+    widest = max(font(font_name, size).getlength(l) for l in lines)
+    if widest <= max_w:
+        return lines, size
+    if widest <= max_w / 0.86:                       # すこしはみ出すだけ → 小さくする
+        return lines, int(size * max_w / widest)
+    f = font(font_name, size)
+    out = []
+    for l in lines:
+        out += _split_line(l, f, max_w)
+    widest = max(f.getlength(l) for l in out)
+    if widest > max_w:                                # それでも長い行は小さくして必ず収める
+        size = int(size * max_w / widest)
+    return out, size
+
+
 def draw_captions(fr: Frame, captions, t):
     W, H = fr.size
     for c in captions:
@@ -386,10 +431,10 @@ def draw_captions(fr: Frame, captions, t):
         if alpha <= 0.01:
             continue
         dy = (1 - a_in) * c.rise
-        f = font(c.font, c.size)
-        lines = c.text.split("\n")
-        lh = c.size * c.line_gap
-        total = lh * (len(lines) - 1) + c.size
+        lines, size = fit_caption(c.text, c.font, c.size, W - CAPTION_MARGIN * 2)
+        f = font(c.font, size)
+        lh = size * c.line_gap
+        total = lh * (len(lines) - 1) + size
         top = H * c.y - total / 2 + dy
         txt = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
