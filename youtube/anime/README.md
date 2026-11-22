@@ -36,7 +36,8 @@ python anime/make.py ep01_ichigu                            # 本番（4コア�
 | ファイル | 役割 |
 |---|---|
 | `engine.py` | カメラ（寄り・引き・視差）、ベクター描画、ライティング（月明かり・光源）、ブルーム、字幕、並列書き出し |
-| `audio.py` | オルゴール・パッド・アルペジオ・リバーブ・虫の声・夜風・効果音の合成 |
+| `audio.py` | 楽器（マリンバ・オルゴールほか7種）・パッド・リバーブ・虫の声・夜風・雨・小鳥・効果音の合成 |
+| `tunes.py` | 曲集（ほのぼのお散歩・わくわくぽんぽこ・しっとり夕暮れ・和風・ワルツ）。`meta.yaml` の `music:` で選ぶ |
 | `scenery.py` | 月夜の森（空・月・星・3層の木・草・葉・つる草） |
 | `cast/firefly.py` | ホタル（表情：open/squeeze/closed/wide/happy/sad、光る量、はばたき） |
 | `cast/snail.py` | カタツムリ親子（sad/normal/happy/content、目の柄の垂れ、涙）とハート |

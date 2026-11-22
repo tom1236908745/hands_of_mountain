@@ -87,6 +87,7 @@ def main():
     ap.add_argument("--stills", help="カンマ区切りの秒数")
     ap.add_argument("--range", help="開始,終了（秒）")
     ap.add_argument("--audio-only", action="store_true")
+    ap.add_argument("--remux", action="store_true", help="映像は作り直さず、音だけ作り直して video.mp4 に入れ替える")
     ap.add_argument("--workers", type=int)
     ap.add_argument("--sound", help="音色スタイル（musicbox/piano/marimba/guitar/koto/lofi/chiptune）。"
                                      "省略時は meta.yaml の sound:、それもなければ musicbox")
@@ -111,17 +112,48 @@ def main():
     audio = out_dir / "audio.wav"
     score_path = ep_dir / "score.py"
     import audio as audio_mod
-    meta_sound = None
+    meta = {}
     if (ep_dir / "meta.yaml").exists():
-        meta_sound = (yaml.safe_load((ep_dir / "meta.yaml").read_text(encoding="utf-8")) or {}).get("sound")
-    audio_mod.STYLE = args.sound or meta_sound or "musicbox"
+        meta = yaml.safe_load((ep_dir / "meta.yaml").read_text(encoding="utf-8")) or {}
+    music_key = meta.get("music")
+    audio_mod.STYLE = args.sound or meta.get("sound") or ("marimba" if music_key else "musicbox")
     if score_path.exists():
-        print(f"♪ 音楽を合成中…（音色：{audio_mod.STYLES[audio_mod.STYLE]['label']}）")
-        load(score_path, "score").build().write(audio)
+        if music_key:
+            # 曲は曲集（tunes.py）から、効果音・環境音はその回の score.py から
+            import numpy as np
+            import tunes
+            print(f"♪ 曲：{tunes.KEYS[music_key][0]}（{audio_mod.STYLES[audio_mod.STYLE]['label']}）＋ この回の効果音")
+            audio_mod.MUSIC_ON = False
+            sfx_mix = load(score_path, "score").build()
+            audio_mod.MUSIC_ON = True
+            sfx = sfx_mix.render(fade_out=2.0, normalize=False)
+            bgm = tunes.render_tune(music_key, sfx_mix.duration, style=audio_mod.STYLE)
+            n = min(len(sfx), len(bgm))
+            mix = bgm[:n] * float(meta.get("music_gain", 0.8)) + sfx[:n]
+            mix *= 0.89 / (np.abs(mix).max() + 1e-9)
+            import wave
+            with wave.open(str(audio), "wb") as w:
+                w.setnchannels(2)
+                w.setsampwidth(2)
+                w.setframerate(audio_mod.SR)
+                w.writeframes((np.clip(mix, -1, 1) * 32767).astype("<i2").tobytes())
+        else:
+            print(f"♪ 音楽を合成中…（音色：{audio_mod.STYLES[audio_mod.STYLE]['label']}）")
+            load(score_path, "score").build().write(audio)
         print(f"  → {audio}")
     else:
         audio = None
     if args.audio_only:
+        return
+    if args.remux:
+        import subprocess
+        src = out_dir / "video.mp4"
+        tmp = out_dir / "video_remux.mp4"
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-i", str(audio), "-map", "0:v",
+                        "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest",
+                        "-movflags", "+faststart", str(tmp)], check=True)
+        tmp.replace(src)
+        print(f"音を入れ替えました → {src}")
         return
 
     t_range = tuple(float(x) for x in args.range.split(",")) if args.range else None

@@ -49,6 +49,7 @@ STYLES = {
     "chiptune": dict(inst="chip", pad="triangle", reverb=0.12, label="8ビット"),
 }
 STYLE = "musicbox"          # make.py の --sound や meta.yaml の sound: で切りかえる
+MUSIC_ON = True             # False にすると曲（メロディ・和音）を鳴らさず、効果音・環境音だけにする
 
 
 class Mix:
@@ -70,6 +71,8 @@ class Mix:
     # ---------------------------------------------------------- 楽器
     def music_box(self, note, t, vel=0.6, decay=1.6, pan=0.0):
         """メロディの1音。音色は self.style["inst"] で決まる（既定はオルゴール）。"""
+        if not MUSIC_ON:
+            return
         inst = self.style["inst"]
         if inst == "musicbox":
             return self._bell(note, t, vel, decay, pan)
@@ -164,6 +167,8 @@ class Mix:
 
     def pad(self, notes, t0, t1, vel=0.5, attack=1.2, release=1.5, bright=0.25):
         """やわらかいパッド（ゆっくり立ち上がる和音）。"""
+        if not MUSIC_ON:
+            return
         dur = t1 - t0 + release
         tt = np.arange(int(dur * SR)) / SR
         env = np.minimum(1, tt / attack) * np.clip((t1 - t0 + release - tt) / release, 0, 1)
@@ -309,8 +314,8 @@ class Mix:
         self._add(self.music, t, _pan(sig * vel, 0))
 
     def pop(self, t, vel=0.2, note="C6"):
-        """花が咲く「ぽんっ」。"""
-        self.music_box(note, t, vel=vel, decay=0.5)
+        """花が咲く「ぽんっ」（効果音なので、曲を止めていても鳴る）。"""
+        self._bell(note, t, vel=vel, decay=0.5)
 
     def chords(self, prog, vel=0.55):
         """prog = [(開始, 終了, ["C3","E3","G3"]), ...]"""
@@ -369,7 +374,7 @@ class Mix:
         self.dry += np.stack([crackle, crackle], axis=1).astype(np.float32) * 0.6
         return music
 
-    def render(self, fade_out=2.0):
+    def render(self, fade_out=2.0, normalize=True):
         music = self.music
         if self.style.get("lofi"):
             music = self._lofi(music)
@@ -381,7 +386,7 @@ class Mix:
             k = int(fade_out * SR)
             mix[-k:] *= np.linspace(1, 0, k)[:, None] ** 1.5
         peak = np.abs(mix).max()
-        if peak > 0:
+        if normalize and peak > 0:
             mix *= 0.89 / peak
         return mix
 

@@ -133,8 +133,44 @@ def waltz():
     return m
 
 
+def render_tune(key, duration, style="marimba", fade_out=2.5):
+    """曲をエピソードの長さに合わせる（足りなければ、つなぎ目をなめらかにくり返す）。正規化前の波形を返す。"""
+    import numpy as np
+    fn = dict((k, f) for k, (_, f) in KEYS.items())[key]
+    prev = audio.STYLE
+    audio.STYLE = style
+    try:
+        one = fn().render(fade_out=0, normalize=False)
+    finally:
+        audio.STYLE = prev
+    sr = audio.SR
+    # 末尾の無音を切ってから、1秒の重ね合わせでくり返す
+    amp = np.abs(one).max(axis=1)
+    last = np.nonzero(amp > amp.max() * 0.02)[0]
+    one = one[: (last[-1] + int(0.6 * sr)) if len(last) else len(one)]
+    n = int(duration * sr)
+    out = np.zeros((n, 2), np.float32)
+    xf = int(1.0 * sr)
+    pos = 0
+    while pos < n:
+        seg = one[: n - pos].copy()
+        if pos > 0:
+            k = min(xf, len(seg))
+            seg[:k] *= np.linspace(0, 1, k)[:, None]
+            out[pos:pos + k] *= np.linspace(1, 0, k)[:, None]
+        out[pos:pos + len(seg)] += seg
+        pos += len(one) - xf
+    k = int(fade_out * sr)
+    out[-k:] *= np.linspace(1, 0, k)[:, None] ** 1.5
+    return out
+
+
 TUNES = [("ほのぼのお散歩", sanpo), ("わくわくぽんぽこ", wakuwaku), ("しっとり夕暮れ", yuugure),
          ("和風（陽音階）", wafuu), ("ワルツ", waltz)]
+
+# meta.yaml の music: に書く名前
+KEYS = {"sanpo": ("ほのぼのお散歩", sanpo), "wakuwaku": ("わくわくぽんぽこ", wakuwaku),
+        "yuugure": ("しっとり夕暮れ", yuugure), "wafuu": ("和風（陽音階）", wafuu), "waltz": ("ワルツ", waltz)}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

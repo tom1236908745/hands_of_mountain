@@ -20,7 +20,9 @@ description: 仏教・聖書・故事成語などの「ことば」を題材に�
      - spec の表の時刻と、字幕・カメラ・演技の時刻をそろえる。
      - キャラは `anime/cast/`、背景は `anime/scenery.py` を再利用する。新しいキャラは cast/ に追加する（ローカル座標・表情パラメータ方式）。
      - 新しいキャラを作るときは、先に `youtube/character/DESIGN_PRINCIPLES.md` の表（シルエット・まるさ・赤ちゃん比率・シンプルな顔・色数・しるし・表情・ダメなところ・共感・ぶれなさ・いまらしさ）を spec.md に埋めてから描く。
-   - `score.py`: `build()` が `audio.Mix` を返す。場面ごとの調・進行・効果音を spec の時刻に合わせる。
+   - **曲は曲集から選ぶ**：`meta.yaml` に `music:`（sanpo / wakuwaku / yuugure / wafuu / waltz、音色はマリンバ）。選び方は `youtube/構成メモ.md` の「音楽」の表。となりの回と同じ曲は避ける。
+   - `score.py`: `build()` が `audio.Mix` を返す。**効果音・環境音**（雨・小鳥・風・ころぶ音・ぽん など）を spec の時刻に合わせて書く（`music:` があると、score.py の中のメロディ・和音は自動で鳴らなくなる）。
+   - 曲だけ変えたいときは `python anime/make.py <ep> --remux`（映像は作り直さず音だけ入れ替え）。
    - `meta.yaml`: 投稿タイトル・説明文・出典・ハッシュタグ・`cover_time`。
 3. **確認**（ここを省略しない）
    - `python anime/make.py <ep> --stills 1,5,9,...` で場面ごとの静止画を出し、画像を見て直す：
