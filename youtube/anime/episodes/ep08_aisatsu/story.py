@@ -22,7 +22,7 @@ _spec.loader.exec_module(base)
 FPS, SIZE, DURATION = base.FPS, base.SIZE, base.DURATION
 
 CAPTIONS = [
-    Caption(0.5, 4.0, "なんだか みんな、ごきげんななめな朝。"),
+    Caption(0.5, 4.0, "なんだか みんな、むすっとして見える朝。"),
     Caption(5.4, 8.6, "ことにゃんは「おはよう」と 声をかけた。"),
     Caption(9.2, 12.2, "返ってきた「おはよう」は、\n思ったより 元気だった。"),
     Caption(12.6, 16.6, "ひとこと 交わすたびに、"),
