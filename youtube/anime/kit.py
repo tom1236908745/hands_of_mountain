@@ -57,6 +57,10 @@ def ending(t0, word, source, after, reading=None, after_t=None, end=37.6):
     caps.append(Caption(t0 + 0.9, after_t - 0.4, source, size=38, font=MINCHO, y=y_src, fade_in=0.9, fade_out=0.8))
     for i, line in enumerate(after):
         caps.append(Caption(after_t + i * 1.0, end, line, size=50, y=0.27 + i * 0.06, fade_out=0.9))
+    last = after_t + (len(after) - 1) * 1.0
+    if after and end - last < 1.5:
+        raise ValueError(f"結びの最後の行「{after[-1]}」が {end - last:.1f} 秒しか表示されません。"
+                         f"after_t を {end - 1.5 - (len(after) - 1):.1f} 以下にしてください")
     return caps
 
 
