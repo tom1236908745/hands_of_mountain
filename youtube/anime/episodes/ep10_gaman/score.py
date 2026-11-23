@@ -1,12 +1,12 @@
 """ep10『我慢』の効果音・環境音（曲は meta.yaml の music: から）。"""
 from audio import Mix
 
-DURATION = 36.0
+DURATION = 37.5
 
 
 def build() -> Mix:
     m = Mix(DURATION, seed=10)
-    m.birds(0, 35, vel=0.035)
+    m.birds(0, 36.5, vel=0.035)
     m.wind(vel=0.02)
     for t in (9.4, 10.0, 10.6, 11.2, 11.8, 12.4, 13.0, 13.6):     # よろよろ歩き
         m.pop(t, vel=0.06, note="G4")
