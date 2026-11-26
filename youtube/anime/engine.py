@@ -373,6 +373,8 @@ class Caption:
     fade_in: float = 0.5
     fade_out: float = 0.5
     rise: float = 22
+    color: tuple = (255, 255, 255)    # 文字の色（紙の上などは こげ茶に）
+    shadow: bool = True               # うしろの影
 
 
 CAPTION_MARGIN = 70          # 字幕の左右の余白（px）。この内側に必ず収める
@@ -443,8 +445,9 @@ def draw_captions(fr: Frame, captions, t):
             w = f.getlength(line)
             x = (W - w) / 2
             y = top + i * lh
-            ds.text((x, y + 4), line, font=f, fill=(0, 0, 20, 200), stroke_width=4, stroke_fill=(0, 0, 20, 200))
-            dt.text((x, y), line, font=f, fill=(255, 255, 255, 255))
+            if c.shadow:
+                ds.text((x, y + 4), line, font=f, fill=(0, 0, 20, 200), stroke_width=4, stroke_fill=(0, 0, 20, 200))
+            dt.text((x, y), line, font=f, fill=tuple(c.color[:3]) + (255,))
         shadow = shadow.filter(ImageFilter.GaussianBlur(9))
         layer = Image.alpha_composite(shadow, txt)
         if alpha < 1:

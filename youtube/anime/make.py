@@ -77,6 +77,8 @@ def write_meta(ep_dir: Path, out_dir: Path):
     lines = [f"【タイトル】\n{m['title']}\n", "【説明文】", m.get("description", "").strip(), ""]
     if m.get("source"):
         lines += [f"出典：{m['source']}", ""]
+    if m.get("chapters"):
+        lines += ["■ チャプター"] + [f"{c}" for c in m["chapters"]] + [""]
     lines += [" ".join(m.get("hashtags", []))]
     (out_dir / "post.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -94,6 +96,8 @@ def main():
     args = ap.parse_args()
 
     ep_dir = HERE / "episodes" / args.episode
+    if not ep_dir.exists() and (HERE / "long" / args.episode).exists():
+        ep_dir = HERE / "long" / args.episode          # 長編（横長）
     if not ep_dir.exists():
         sys.exit(f"エピソードがありません: {ep_dir}")
     out_dir = OUT_ROOT / args.episode
@@ -122,12 +126,36 @@ def main():
             # 曲は曲集（tunes.py）から、効果音・環境音はその回の score.py から
             import numpy as np
             import tunes
-            print(f"♪ 曲：{tunes.KEYS[music_key][0]}（{audio_mod.STYLES[audio_mod.STYLE]['label']}）＋ この回の効果音")
+            name = "曲の切りかえあり" if isinstance(music_key, list) else tunes.KEYS[music_key][0]
+            print(f"♪ 曲：{name}（{audio_mod.STYLES[audio_mod.STYLE]['label']}）＋ この回の効果音")
             audio_mod.MUSIC_ON = False
             sfx_mix = load(score_path, "score").build()
             audio_mod.MUSIC_ON = True
             sfx = sfx_mix.render(fade_out=2.0, normalize=False)
-            bgm = tunes.render_tune(music_key, sfx_mix.duration, style=audio_mod.STYLE)
+            if isinstance(music_key, list):
+                # 長編：[[曲, 開始, 終了], ...] を 2秒のクロスフェードでつなぐ
+                sr = audio_mod.SR
+                bgm = np.zeros((int(sfx_mix.duration * sr), 2), np.float32)
+                xf = 2.0
+                for key, t0, t1 in music_key:
+                    seg_ = tunes.render_tune(key, (t1 - t0) + xf, style=audio_mod.STYLE, fade_out=xf)
+                    k = min(int(xf * sr), len(seg_))
+                    seg_[:k] *= np.linspace(0, 1, k)[:, None]
+                    i0 = int(t0 * sr)
+                    i1 = min(len(bgm), i0 + len(seg_))
+                    bgm[i0:i1] += seg_[: i1 - i0]
+                for t0, t1, g in meta.get("music_duck", []):   # 嵐などで 曲を小さく
+                    i0, i1 = int(t0 * sr), int(t1 * sr)
+                    ramp = int(0.8 * sr)
+                    env = np.ones(len(bgm), np.float32)
+                    env[i0:i1] = g
+                    env[max(0, i0 - ramp):i0] = np.linspace(1, g, i0 - max(0, i0 - ramp))
+                    env[i1:i1 + ramp] = np.linspace(g, 1, len(env[i1:i1 + ramp]))
+                    bgm *= env[:, None]
+                label = " → ".join(tunes.KEYS[k][0] for k, _, _ in music_key)
+                print(f"  曲の流れ：{label}")
+            else:
+                bgm = tunes.render_tune(music_key, sfx_mix.duration, style=audio_mod.STYLE)
             n = min(len(sfx), len(bgm))
             mix = bgm[:n] * float(meta.get("music_gain", 0.8)) + sfx[:n]
             mix *= 0.89 / (np.abs(mix).max() + 1e-9)
