@@ -458,6 +458,75 @@ def draw_captions(fr: Frame, captions, t):
 _STORY = None
 
 
+# ============================================================================
+# 冒頭タイトル（動画のはじめに、投稿タイトルの「気になる一文」を出す）
+# ============================================================================
+TITLE_FONT = "MPLUSRounded1c-ExtraBold.ttf"
+
+
+@lru_cache(maxsize=8)
+def opening_title_config(story_path: str):
+    """story.py と同じフォルダの meta.yaml から冒頭タイトルの設定を読む。
+    meta.yaml:  opening_title: "文字"（省略時は title からハッシュタグと絵文字を除いたもの。false で出さない）
+                opening_title_sec: 3.0（表示する秒数）"""
+    import re
+    import yaml
+    p = Path(story_path).parent / "meta.yaml"
+    if not p.exists():
+        return None
+    m = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    text = m.get("opening_title", None)
+    if text is False:
+        return None
+    if not text:
+        text = re.sub(r"#\S+", "", str(m.get("title", "")))
+        text = re.sub(r"[\U0001F000-\U0001FFFF\u2600-\u27BF]", "", text).strip()
+    if not text:
+        return None
+    return text, float(m.get("opening_title_sec", 3.0))
+
+
+def draw_opening_title(img, t, text, sec, size=(1080, 1920)):
+    """画面の上のほう（字幕より上）に、タイトルを大きく出す。最初のコマから表示し、最後0.5秒で消える。"""
+    if t > sec:
+        return img
+    W, H = size
+    a = 1 - seg(t, sec - 0.5, sec)            # 最初のコマから はっきり見せる（一覧・スワイプ中に目に入る）
+    if a <= 0.01:
+        return img
+    margin = 60
+    lines, fs = fit_caption(text, TITLE_FONT, 68, W - margin * 2 - 60)
+    f = font(TITLE_FONT, fs)
+    lh = fs * 1.3
+    total = lh * (len(lines) - 1) + fs
+    cy = H * 0.18
+    top = cy - total / 2
+    widest = max(f.getlength(l) for l in lines)
+    lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    pad_x, pad_y = 34, 26
+    d.rounded_rectangle(((W - widest) / 2 - pad_x, top - pad_y, (W + widest) / 2 + pad_x, top + total + pad_y + 6),
+                        radius=36, fill=(40, 28, 24, 150))
+    for i, line in enumerate(lines):
+        w = f.getlength(line)
+        d.text(((W - w) / 2, top + i * lh), line, font=f, fill=(255, 248, 230, 255),
+               stroke_width=5, stroke_fill=(84, 62, 54, 255))
+    if a < 1:
+        lay.putalpha(lay.getchannel("A").point(lambda v: int(v * a)))
+    out = img.convert("RGBA")
+    out.alpha_composite(lay)
+    return out.convert("RGB")
+
+
+def render_frame(story, story_path, t):
+    """story.render(t) に、冒頭タイトルを重ねた1フレーム。"""
+    img = story.render(t)
+    cfg = opening_title_config(str(story_path))
+    if cfg:
+        img = draw_opening_title(img, t, cfg[0], cfg[1], story.SIZE)
+    return img
+
+
 def _render_one(args):
     path, t = args
     global _STORY
@@ -466,7 +535,7 @@ def _render_one(args):
         spec = importlib.util.spec_from_file_location("story", path)
         _STORY = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(_STORY)
-    return _STORY.render(t).tobytes()
+    return render_frame(_STORY, path, t).tobytes()
 
 
 def render_video(story_path: Path, story, out: Path, audio: Path | None = None, workers=None, t_range=None):

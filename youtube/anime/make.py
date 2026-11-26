@@ -51,11 +51,11 @@ def check_glyphs(story):
     return not bad
 
 
-def contact_sheet(story, times, out: Path, w=360):
+def contact_sheet(story, times, out: Path, w=360, story_path=None):
     ims = []
     for t in times:
         t0 = time.time()
-        ims.append(story.render(t))
+        ims.append(engine.render_frame(story, story_path, t) if story_path else story.render(t))
         print(f"  {t:5.1f}s  ({time.time() - t0:.2f}s/frame)")
     W, H = story.SIZE
     h = int(w * H / W)
@@ -105,7 +105,7 @@ def main():
     if args.stills:
         times = [float(x) for x in args.stills.split(",")]
         out = out_dir / "stills.png"
-        contact_sheet(story, times, out)
+        contact_sheet(story, times, out, story_path=story_path)
         print(f"確認シート → {out}")
         return
 
@@ -166,7 +166,7 @@ def main():
     if not t_range:
         meta = yaml.safe_load((ep_dir / "meta.yaml").read_text(encoding="utf-8")) if (ep_dir / "meta.yaml").exists() else {}
         cover_t = float(meta.get("cover_time", story.DURATION / 2))
-        story.render(cover_t).save(out_dir / "cover.png")
+        engine.render_frame(story, story_path, cover_t).save(out_dir / "cover.png")
         write_meta(ep_dir, out_dir)
         print(f"カバー画像・投稿文 → {out_dir}")
 
