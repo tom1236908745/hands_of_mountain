@@ -23,7 +23,7 @@ description: 仏教・聖書・故事成語などの「ことば」を題材に�
    - **曲は曲集から選ぶ**：`meta.yaml` に `music:`（sanpo / wakuwaku / yuugure / wafuu / waltz、音色はマリンバ）。選び方は `youtube/構成メモ.md` の「音楽」の表。となりの回と同じ曲は避ける。
    - `score.py`: `build()` が `audio.Mix` を返す。**効果音・環境音**（雨・小鳥・風・ころぶ音・ぽん など）を spec の時刻に合わせて書く（`music:` があると、score.py の中のメロディ・和音は自動で鳴らなくなる）。
    - 曲だけ変えたいときは `python anime/make.py <ep> --remux`（映像は作り直さず音だけ入れ替え）。
-   - `meta.yaml`: 投稿タイトル・説明文・出典・ハッシュタグ・`cover_time`。
+   - `meta.yaml`: 投稿タイトル・説明文・出典・ハッシュタグ・`cover_time`。 ハッシュタグには毎回 `#猫` を入れる。
    - 冒頭3秒は `meta.yaml` の `title`（ハッシュタグ・絵文字を除く）が画面上部に自動で出る。冒頭の字幕・キャラと重ならないか `--stills 0,1.5` で確認する。
 3. **確認**（ここを省略しない）
    - `python anime/make.py <ep> --stills 1,5,9,...` で場面ごとの静止画を出し、画像を見て直す：
