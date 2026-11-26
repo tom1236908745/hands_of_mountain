@@ -495,7 +495,8 @@ def draw_opening_title(img, t, text, sec, size=(1080, 1920)):
     if a <= 0.01:
         return img
     margin = 60
-    lines, fs = fit_caption(text, TITLE_FONT, 68, W - margin * 2 - 60)
+    base = 120 if len(text) <= 6 else 68               # ことばだけ（短い）なら大きく
+    lines, fs = fit_caption(text, TITLE_FONT, base, W - margin * 2 - 60)
     f = font(TITLE_FONT, fs)
     lh = fs * 1.3
     total = lh * (len(lines) - 1) + fs
