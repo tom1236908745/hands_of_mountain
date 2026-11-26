@@ -513,9 +513,9 @@ def turtle_state(t):
 def years_text(t):
     if t < 85.5 or t > 111.0:
         return None
-    if t < 104.8:
-        return f"{int(lerp(1, 4, seg(t, 86.0, 104.0, lambda v: clamp(v))))}年"
-    return f"{int(lerp(4, 100, seg(t, 104.8, 108.6, lambda v: clamp(v) ** 1.3)))}年"
+    if t < 105.4:
+        return "1年"                                      # 春・夏・秋・冬で 1年
+    return f"{max(1, int(lerp(1, 100, seg(t, 105.4, 108.8, lambda v: clamp(v) ** 1.3))))}年"
 
 
 def scene_deep(t):
