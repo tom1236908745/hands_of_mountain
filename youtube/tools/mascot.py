@@ -386,11 +386,12 @@ def _sweat(pen, c, x, y, r=22):
     pen.polygon([(x - r * 0.95, y - r * 0.3), (x + r * 0.95, y - r * 0.3), (x, y - r * 2.4)], fill=c["tear"])
 
 
-def _question(pen, c):
+def _question(pen, c, mirror=False):
     col = c["line"]
-    pen.arc(905, 230, 44, 44, 180, 400, col, 18)
-    pen.line([(939, 259), (905, 296), (905, 322)], col, 18)
-    pen.circle(905, 362, 12, fill=col)
+    x = 1000 - 905 if mirror else 905                # 位置だけ反対側へ。「？」の形はそのまま
+    pen.arc(x, 230, 44, 44, 180, 400, col, 18)
+    pen.line([(x + 34, 259), (x, 296), (x, 322)], col, 18)
+    pen.circle(x, 362, 12, fill=col)
 
 
 def _anger_mark(pen, c):
@@ -402,9 +403,11 @@ def _anger_mark(pen, c):
                 {(-1, -1): 90, (1, -1): 180, (-1, 1): 360, (1, 1): 270}[(dx, dy)], col, 15)
 
 
-def _zzz(pen, c):
+def _zzz(pen, c, mirror=False):
     col = c["line"]
     for i, (x, y, s) in enumerate(((860, 330, 34), (915, 250, 26), (955, 190, 19))):
+        if mirror:
+            x = 1000 - x                              # 位置だけ反対側へ。「Z」の形はそのまま
         pen.line([(x - s, y - s), (x + s, y - s), (x - s, y + s), (x + s, y + s)], col, 11)
 
 
@@ -458,7 +461,7 @@ def _eye_squeeze(pen, c, center, side):     # ＞＜
 # ---- 公開API ------------------------------------------------------------------
 def draw(expression: str = "normal", size: int = 512, talking: bool = False,
          blink: bool = False, palette: dict | None = None, item: str | None = None,
-         lantern: float = 0.0, ss: int | None = None, flap: float = 0.0) -> Image.Image:
+         lantern: float = 0.0, ss: int | None = None, flap: float = 0.0, mirror: bool = False) -> Image.Image:
     """キャラを描いた RGBA 画像（正方形・背景透明）を返す。
 
     expression: EXPRESSIONS のいずれか
@@ -552,11 +555,8 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
         _anger_mark(pen, c)
         for x in (300, 700):                      # ぷくっとふくらんだほっぺ
             pen.ellipse(x, 645, 50, 32, fill=c["cheek"] + (230,))
-    elif e == "thinking":
-        _question(pen, c)
     elif e == "sleepy":
         _snot_bubble(pen, c)
-        _zzz(pen, c)
     elif e == "shy":
         _sweat(pen, c, 805, 460, 22)
         for x in (296, 336, 662, 702):            # 赤面の斜線
@@ -572,6 +572,15 @@ def draw(expression: str = "normal", size: int = 512, talking: bool = False,
     elif e == "blank":
         for x in (380, 620):                       # 縦線（スン…）
             pen.line([(x, 470), (x, 515)], c["line"] + (120,), 5)
+
+    # 左右反転（左向き）は ここで。文字の形をした効果（Z・？）は反転させずに、位置だけ反対側に描く
+    if mirror:
+        img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        pen = _Pen(img, px / BASE)
+    if e == "thinking":
+        _question(pen, c, mirror)
+    elif e == "sleepy":
+        _zzz(pen, c, mirror)
 
     return img if ss == 1 else img.resize((size, size), Image.LANCZOS)
 

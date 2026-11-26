@@ -25,11 +25,11 @@ KURO = dict(fur=(78, 72, 80), patch_a=(62, 58, 66), patch_b=(46, 42, 50), eye=(2
 
 
 @lru_cache(maxsize=48)
-def _sprite(expr, px, item, lantern_q, palette_key, blink, flap_q):
+def _sprite(expr, px, item, lantern_q, palette_key, blink, flap_q, mirror=False):
     palette = {"kitten": KITTEN_GREY, "mother": MOTHER_GREY, "kuro": KURO}.get(palette_key)
     ss = 2 if px < 500 else 1
     return mascot.draw(expr, px, item=item, lantern=lantern_q / 10, palette=palette, ss=ss, blink=blink,
-                       flap=flap_q / 4)
+                       flap=flap_q / 4, mirror=mirror)
 
 
 def draw(fr, x, ground, size, expr="normal", *, item=None, lantern=0.0, palette=None, flip=False,
@@ -37,9 +37,7 @@ def draw(fr, x, ground, size, expr="normal", *, item=None, lantern=0.0, palette=
     """猫を貼る。戻り値は 光の中心（ちょうちん／着ぐるみのお尻）のワールド座標。"""
     view = fr.view()
     px = max(16, int(round(size * view.zoom / 8)) * 8)       # 8px 刻みでキャッシュ
-    img = _sprite(expr, px, item, int(round(lantern * 10)), palette, blink, int(round(flap * 4)))
-    if flip:
-        img = img.transpose(Image.FLIP_LEFT_RIGHT)
+    img = _sprite(expr, px, item, int(round(lantern * 10)), palette, blink, int(round(flap * 4)), bool(flip))
     w = int(px * (1 + (1 - squash) * 0.6))
     h = int(px * squash)
     if (w, h) != (px, px):
