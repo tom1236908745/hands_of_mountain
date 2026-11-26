@@ -662,7 +662,14 @@ def scene_meet(t):
         k = seg(t, POP_T, POP_T + 0.45, ease_out)
         over = 1 + 0.12 * math.sin(math.pi * seg(t, POP_T + 0.3, POP_T + 0.9))
         hx, hy = hole[0], hole[1] - 46 * k * over
-        tt.head_only(bv, hx, hy, 150 * 0.55 * (0.6 + 0.4 * k), smile=seg(t, POP_T + 0.8, POP_T + 2.0))
+        hs = 150 * 0.55 * (0.6 + 0.4 * k)
+        nw = 150 * 0.13                                   # 首（穴の中から 頭まで）
+        bv.poly([(hx - nw, hole[1] + 6), (hx + nw, hole[1] + 6), (hx + nw * 0.9, hy + hs * 0.1),
+                 (hx - nw * 0.9, hy + hs * 0.1)], tt.SKIN)
+        bv.line([(hx - nw, hole[1] + 6), (hx - nw * 0.9, hy + hs * 0.1)], tt.LINE, 5)
+        bv.line([(hx + nw, hole[1] + 6), (hx + nw * 0.9, hy + hs * 0.1)], tt.LINE, 5)
+        bv.line([(hx - nw * 0.7, hole[1] - 10), (hx + nw * 0.7, hole[1] - 12)], tt.LINE + (110,), 3)   # しわ
+        tt.head_only(bv, hx, hy, hs, smile=seg(t, POP_T + 0.8, POP_T + 2.0))
         log_front_lip(bv, lx, ly, 150, rot)
         for i in range(10):                               # しぶき
             v = seg(t, POP_T, POP_T + 0.9)
