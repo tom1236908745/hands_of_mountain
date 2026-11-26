@@ -24,7 +24,7 @@ KURO = dict(fur=(78, 72, 80), patch_a=(62, 58, 66), patch_b=(46, 42, 50), eye=(2
             line=(40, 34, 38), ear_in=(196, 150, 150), cheek=(230, 140, 140))     # 大きな黒ねこ「くろ」
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=48)
 def _sprite(expr, px, item, lantern_q, palette_key, blink, flap_q):
     palette = {"kitten": KITTEN_GREY, "mother": MOTHER_GREY, "kuro": KURO}.get(palette_key)
     ss = 2 if px < 500 else 1

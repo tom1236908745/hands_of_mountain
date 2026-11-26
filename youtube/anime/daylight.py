@@ -45,7 +45,7 @@ def blend(a, b, u):
 
 
 # ---------------------------------------------------------------- 空・天体
-@lru_cache(maxsize=64)
+@lru_cache(maxsize=6)
 def _sky_img(w, h, top, bot):
     y = np.linspace(0, 1, h * SS, dtype=np.float32)[:, None] ** 0.9
     t, b = np.array(top, np.float32), np.array(bot, np.float32)

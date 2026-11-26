@@ -244,7 +244,7 @@ def depth_color(y):
     return tuple(int(v) for v in top + (bot - top) * u ** 0.8)
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=6)
 def _water_img(top, bot):
     y = np.linspace(0, 1, H * SS, dtype=np.float32)[:, None]
     t, b = np.array(top, np.float32), np.array(bot, np.float32)
