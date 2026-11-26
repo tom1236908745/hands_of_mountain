@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
 ANIME = HERE.parent.parent
-sys.path[:0] = [str(ANIME), str(ANIME / "cast")]
+sys.path[:0] = [str(HERE), str(ANIME), str(ANIME / "cast")]
 
 import daylight as dl  # noqa: E402
 import kit  # noqa: E402
@@ -26,10 +26,13 @@ import turtle as tt  # noqa: E402
 from engine import (GOTHIC, MINCHO, SS, Cam, Caption, Frame, Light, Track, clamp, draw_captions, ease_in_out,  # noqa: E402
                     ease_out, font, lerp, pulse, seg)
 
+import pace  # noqa: E402  （テンポ調整：お話の時間 → 動画の時間）
+
 FPS = 30
 SIZE = (1920, 1080)
 W, H = SIZE
-DURATION = 310.0
+DURATION = round(pace.OUT_END * FPS) / FPS          # 動画の長さ（つめたあと）
+STORY_DURATION = 310.0                               # お話の時間（この中の時刻はすべてこちら）
 
 INK = (84, 62, 54)
 PAPER = (252, 246, 232)
@@ -65,7 +68,7 @@ def P(t0, t1, text, y, size, fnt=GOTHIC, color=INK):
 CAPTIONS = [
     # オープニング
     C(0.6, 4.2, "ある 晴れた朝。"),
-    C(4.6, 8.0, "子ねこが、お魚クッキーを 分けてくれました。"),
+    C(4.4, 9.4, "子ねこが、お魚クッキーを 分けてくれました。"),
     C(15.4, 20.6, "…「ありがとう」って、どういう 意味だろう？"),
     # ことば帖のページ
     P(24.6, 48.7, "ありがとう", 0.22, 96, TITLE_FONT),
@@ -80,7 +83,7 @@ CAPTIONS = [
     # 海の底
     C(52.6, 57.0, "広い 広い 海の 底に、"),
     C(57.4, 63.6, "目の見えない、一匹の 年老いた 亀が すんでいました。"),
-    C(65.4, 70.2, "亀は、いつもは 海の底で しずかに くらし、"),
+    C(64.2, 70.3, "亀は、いつもは 海の底で しずかに くらし、"),
     C(70.6, 76.6, "百年に 一度だけ、海の上に 顔を出します。"),
     C(86.0, 90.0, "春が来て、"),
     C(91.0, 95.0, "夏が来て、"),
@@ -94,7 +97,7 @@ CAPTIONS = [
     C(132.2, 136.6, "波が来れば、西へ。"),
     C(140.2, 145.0, "嵐の日も、"),
     C(151.6, 155.8, "凪の日も。"),
-    C(156.2, 159.6, "広い 広い 海の、どこかで。"),
+    C(156.0, 159.9, "広い 広い 海の、どこかで。"),
     # 水の中 → 出会い
     C(161.4, 165.8, "百年目の、その日。"),
     C(166.2, 172.2, "亀は、ゆっくりと 海の上へ のぼっていきました。"),
@@ -111,7 +114,7 @@ CAPTIONS = [
     C(219.4, 224.4, "それよりも もっと、めったに ないこと。"),
     C(224.8, 229.2, "お釈迦さまは、そう たとえました。"),
     # 野原へ
-    C(231.6, 235.8, "ことにゃんは、野原に もどってきました。"),
+    C(231.0, 236.6, "ことにゃんは、野原に もどってきました。"),
     C(236.8, 241.8, "子ねこと、おいしい ごはんが あること。"),
     C(243.2, 248.2, "くろが いること。"),
     C(250.2, 254.6, "今日も、空が 晴れていること。"),
@@ -801,7 +804,7 @@ def scene_end(t):
     fr = Frame(SIZE, Cam(W / 2, H / 2, 1.0))
     expr = "happy" if t < 305 else "calm"
     paper_scene(fr, t, cat_expr=expr, cat_xy=(1480, 905), cat_s=240)
-    fr.fade = seg(t, 308.6, DURATION)
+    fr.fade = seg(t, 308.6, STORY_DURATION)
     draw_captions(fr, CAPTIONS, t)
     img = Image.fromarray(fr.compose())
     if 299.0 < t < 308.0:
@@ -814,7 +817,12 @@ SCENES = [(OPEN, scene_open), (PAGE, scene_page), (DEEP, scene_deep), (SURF, sce
           (MEET, scene_meet), (SUTRA, scene_sutra), (BACK, scene_back), (END, scene_end)]
 
 
-def render(t):
+def render(t_out):
+    """動画の時刻 → お話の時刻に直して描く。"""
+    return render_story(pace.to_story(t_out))
+
+
+def render_story(t):
     fn = SCENES[0][1]
     for t0, f in SCENES:
         if t >= t0:

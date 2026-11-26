@@ -83,12 +83,22 @@ def speech_bubble(img, cam_xyz, size, wx, wy, text, alpha=1.0, fsize=40, dx=0.0)
     box = (sx - half, sy - fsize / 2 - pad, sx + half, sy + fsize / 2 + pad)
     lay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(lay)
-    bx = min(max(ax, box[0] + 30), box[2] - 30)                      # しっぽの付け根
+    line_c, fill_c = (104, 82, 74, 255), (255, 255, 255, 240)
+    # しっぽ：話し手の側の下のふちから、話し手のほうへ 短く ずんぐり
+    bx = min(max(ax, box[0] + fsize * 0.9), box[2] - fsize * 0.9)
+    vx, vy = ax - bx, max(ay - box[3], fsize * 0.9)
+    ln = math.hypot(vx, vy)
+    L = fsize * 0.95
+    tip = (bx + vx / ln * L, box[3] + vy / ln * L)
+    hw = fsize * 0.34
     d.rounded_rectangle((box[0], box[1] + 6, box[2], box[3] + 6), radius=fsize * 0.6, fill=(0, 0, 0, 50))
-    d.polygon([(bx - 14, box[3] - 4), (bx + 14, box[3] - 4), (ax, ay)], fill=(255, 255, 255, 240),
-              outline=(104, 82, 74, 255))
-    d.rounded_rectangle(box, radius=fsize * 0.6, fill=(255, 255, 255, 240), outline=(104, 82, 74, 255), width=4)
-    d.polygon([(bx - 11, box[3] - 6), (bx + 11, box[3] - 6), (bx, box[3] + 2)], fill=(255, 255, 255, 240))
+    d.rounded_rectangle(box, radius=fsize * 0.6, fill=fill_c, outline=line_c, width=4)
+    # 枠の上から しっぽを重ね、側面だけ線を引く（付け根に すき間や線が出ない）
+    base_l, base_r = (bx - hw, box[3] - 5), (bx + hw, box[3] - 5)
+    d.polygon([base_l, base_r, tip], fill=fill_c)
+    side_l = (bx - hw, box[3] - 1)
+    side_r = (bx + hw, box[3] - 1)
+    d.line([side_l, tip, side_r], fill=line_c, width=4, joint="curve")
     d.text((sx - tw / 2, sy - fsize * 0.62), text, font=f, fill=(84, 62, 54, 255))
     if alpha < 1:
         lay.putalpha(lay.getchannel("A").point(lambda v: int(v * alpha)))
