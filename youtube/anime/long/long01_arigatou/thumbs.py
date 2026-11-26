@@ -94,3 +94,85 @@ for i, n in enumerate(names):
     dd.text((x + 8, y), n, font=font(BOLD, 18), fill=(240, 240, 240))
 sheet.save(OUT / "一覧.png")
 print(OUT)
+
+
+# ================================================================ A案の派生（A1〜A4）
+def meadow_bg():
+    im = bg(253.0, 3)
+    g = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(g).rectangle((0, 600, 1280, 720), fill=(132, 182, 112, 255))
+    im.alpha_composite(g.filter(ImageFilter.GaussianBlur(3)))
+    return im
+
+
+def sea_bg():
+    im = bg(191.0, 2)                                     # 海と丸太と亀（めったにない出会い）
+    return im
+
+
+def burst(im, cx, cy, col=(255, 244, 200, 90)):
+    import math
+    lay = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    for k in range(18):
+        a0, a1 = k / 18 * 2 * math.pi, (k + 0.45) / 18 * 2 * math.pi
+        d.polygon([(cx, cy), (cx + 1600 * math.cos(a0), cy + 1600 * math.sin(a0)),
+                   (cx + 1600 * math.cos(a1), cy + 1600 * math.sin(a1))], fill=col)
+    im.alpha_composite(lay)
+
+
+# A1：Aの言いかえ。「知らなかった…」で共感
+a1 = meadow_bg()
+burst(a1, 1000, 420)
+cat(a1, "surprised", 700, 120, 640, item="book")
+txt(a1, (60, 80), "「ありがとう」の", 96, (255, 255, 255), stroke=10)
+txt(a1, (60, 220), "本当の意味", 120, (255, 236, 150), stroke=12)
+txt(a1, (70, 400), "知らなかった…", 86, (255, 255, 255), stroke=10)
+a1.convert("RGB").save(OUT / "A1_知らなかった.png")
+
+# A2：Aの文字＋小さく亀（お話の中身が少し見える）
+a2 = meadow_bg()
+cat(a2, "surprised", 700, 120, 640, item="book")
+import turtle as tt  # noqa: E402
+from engine import Frame, Cam  # noqa: E402
+tf = Frame((1280, 720), Cam(640, 360, 1.0))
+tf.base_img = Image.new("RGBA", (1280 * 2, 720 * 2), (0, 0, 0, 0))
+tt.draw(tf.base(), 330, 600, 120, neck=0.6)
+tl = tf.base_img.resize((1280, 720), Image.LANCZOS)
+a2.alpha_composite(tl)
+txt(a2, (60, 60), "「ありがとう」", 112, (255, 236, 150), stroke=10)
+txt(a2, (70, 210), "ほんとうは", 70, (255, 255, 255))
+txt(a2, (60, 300), "“めったにない”", 98, (255, 255, 255), stroke=10)
+txt(a2, (70, 430), "って意味だった…！", 60, (255, 236, 150))
+a2.convert("RGB").save(OUT / "A2_亀つき.png")
+
+# A3：海の背景（丸太と亀）×ことにゃんのアップ
+a3 = sea_bg()
+shade = Image.new("RGBA", a3.size, (0, 0, 0, 0))
+ImageDraw.Draw(shade).rectangle((0, 0, 760, 720), fill=(10, 30, 60, 110))
+a3.alpha_composite(shade.filter(ImageFilter.GaussianBlur(60)))
+cat(a3, "surprised", 720, 150, 600, item="book")
+txt(a3, (60, 80), "「ありがとう」", 112, (255, 236, 150), stroke=10)
+txt(a3, (70, 230), "百年に一度の", 76, (255, 255, 255))
+txt(a3, (60, 330), "めったにない", 110, (255, 255, 255), stroke=12)
+txt(a3, (70, 480), "ことだった", 76, (255, 236, 150))
+a3.convert("RGB").save(OUT / "A3_海背景.png")
+
+# A4：短く・大きく（スマホで一番読みやすい）
+a4 = meadow_bg()
+burst(a4, 980, 430, (255, 236, 170, 80))
+cat(a4, "surprised", 660, 90, 680, item="book")
+txt(a4, (50, 90), "ありがとう", 150, (255, 236, 150), stroke=14)
+txt(a4, (60, 290), "の語源", 110, (255, 255, 255), stroke=12)
+txt(a4, (60, 450), "知ってる？", 110, (255, 255, 255), stroke=12)
+a4.convert("RGB").save(OUT / "A4_短く大きく.png")
+
+names2 = ["A1_知らなかった", "A2_亀つき", "A3_海背景", "A4_短く大きく"]
+sheet = Image.new("RGB", (1280, 760), (30, 30, 34))
+dd = ImageDraw.Draw(sheet)
+for i, n in enumerate(names2):
+    im = Image.open(OUT / f"{n}.png").resize((640, 360))
+    x, y = (i % 2) * 640, (i // 2) * 380
+    sheet.paste(im, (x, y + 20))
+    dd.text((x + 8, y), n, font=font(BOLD, 18), fill=(240, 240, 240))
+sheet.save(OUT / "一覧_A案.png")
