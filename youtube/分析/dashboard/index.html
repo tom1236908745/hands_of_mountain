@@ -1,0 +1,318 @@
+<meta name="dash-one-writer">
+<meta name="dash-form" content="dashboard">
+<style>
+  .kn { display: grid; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); }
+  .kn-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0 0 var(--cds-gap-xs); }
+  .kn-take { color: var(--color-fg-muted); margin: 0; line-height: 1.7; }
+  .kn-take b { color: var(--color-fg); font-variant-numeric: tabular-nums; }
+  .kn-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--cds-gap-md); }
+  .kn-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-xs); align-content: start; }
+  .kn-tile .lab { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); letter-spacing: .04em; }
+  .kn-tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 2.1rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .kn-tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .kn-bar { height: 6px; border-radius: 3px; background: var(--cds-chart-grid); overflow: hidden; }
+  .kn-bar > span { display: block; height: 100%; background: var(--color-ok); }
+  .kn h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); text-wrap: balance; }
+  .kn-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0 0 var(--cds-gap-md); }
+  .kn-chart { position: relative; min-height: 300px; }
+  .kn-chart svg { display: block; width: 100%; overflow: visible; }
+  .kn-chart text { fill: var(--cds-text-secondary); font-size: var(--cds-font-size-caption); }
+  .kn-chart .val { fill: var(--color-fg); font-variant-numeric: tabular-nums; }
+  .kn-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-sm); }
+  .kn-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .kn-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); box-shadow: var(--cds-shadow-popover); border-radius: var(--cds-radius); padding: var(--cds-pad-sm) var(--cds-pad-md); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+  .kn-tools { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; margin-bottom: var(--cds-gap-md); }
+  .kn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--cds-gap-md); min-height: 200px; }
+  .kn-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+  .kn-card .img { aspect-ratio: 9 / 16; background: var(--cds-chart-grid); max-width: 100%; }
+  .kn-card.wide { grid-column: span 2; }
+  .kn-card.wide .img { aspect-ratio: 16 / 9; }
+  .kn-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .kn-card .body { padding: var(--cds-pad-sm) var(--cds-pad-md) var(--cds-pad-md); display: grid; gap: 4px; align-content: start; min-width: 0; }
+  .kn-card .ep { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .kn-card .word { font-weight: var(--cds-font-weight-medium); }
+  .kn-card .story { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .kn-card .meta { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .kn-card .views { font-variant-numeric: tabular-nums; color: var(--color-fg); }
+  .kn-pill { justify-self: start; font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--color-border-line); }
+  .kn-pill.pub { color: var(--color-ok); border-color: var(--color-ok); }
+  .kn-pill.ready { color: var(--color-warn); border-color: var(--color-warn); }
+  .kn-pill.gone { color: var(--color-fg-muted); }
+  .kn-card.gone img { filter: grayscale(1); opacity: .6; }
+  .kn-goals { display: grid; gap: var(--cds-gap-md); }
+  .kn-goal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .kn-goal .row { display: flex; justify-content: space-between; gap: var(--cds-gap-sm); flex-wrap: wrap; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .kn-goal .row b { color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
+  .kn-tablewrap { overflow-x: auto; }
+  .kn table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: var(--cds-font-size-body); }
+  .kn th, .kn td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .kn th:first-child, .kn td:first-child { text-align: left; }
+  .kn th { font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .kn-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--cds-gap-xl); }
+</style>
+
+<div class="kn">
+  <header class="kn-head" id="top">
+    <h1>ことにゃん制作ダッシュボード</h1>
+    <p class="kn-take" data-read lang="ja">いま公開中の動画は <b data-draw="t-pub" data-source="summary" data-field="published">—</b> 本、チャンネルの総再生は <b data-draw="t-views" data-source="summary" data-field="total_views">—</b> 回。登録者は <b data-draw="t-subs" data-source="summary" data-field="subscribers">—</b> 人で、12月末の目標まで あと <b data-draw="t-left" data-source="summary" data-field="subs_left">—</b> 人。作りおきは <b data-draw="t-ready" data-source="summary" data-field="ready">—</b> 本あります。</p>
+  </header>
+
+  <section class="kn-tiles" id="tiles" aria-label="いまの数字">
+    <div class="kn-tile">
+      <span class="lab">チャンネルの総再生</span>
+      <span class="big" data-draw="k-views" data-source="summary" data-field="total_views">—</span>
+      <span class="sub" data-draw="k-views-sub">—</span>
+    </div>
+    <div class="kn-tile">
+      <span class="lab">登録者（12月末の目標 50人）</span>
+      <span class="big" data-draw="k-subs" data-source="summary" data-field="subscribers">—</span>
+      <div class="kn-bar" data-draw="k-subs-bar"></div>
+    </div>
+    <div class="kn-tile">
+      <span class="lab">公開したショート（12月末の目標 30本）</span>
+      <span class="big" data-draw="k-shorts" data-source="summary" data-field="shorts_published">—</span>
+      <div class="kn-bar" data-draw="k-shorts-bar"></div>
+    </div>
+    <div class="kn-tile">
+      <span class="lab">作りおき（完成・まだ出していない）</span>
+      <span class="big" data-draw="k-ready" data-source="summary" data-field="ready">—</span>
+      <span class="sub">毎日1本なら、この日数ぶん出せる</span>
+    </div>
+  </section>
+
+  <section id="views-by-video">
+    <h2>動画ごとの再生回数</h2>
+    <p class="kn-note">公開した動画の、いちばん新しい記録。色はシリーズ（仏教・聖書・故事）。</p>
+    <div class="kn-chart" data-draw="bars" data-source="episodes"></div>
+    <div class="kn-legend" data-draw="legend"></div>
+  </section>
+
+  <section id="gallery">
+    <h2>作った動画</h2>
+    <div class="kn-tools">
+      <select class="dash-select" id="status-filter" aria-label="表示する動画" data-draw="status-filter"></select>
+    </div>
+    <div class="kn-grid" data-draw="cards" data-source="episodes"></div>
+  </section>
+
+  <div class="kn-two">
+    <section id="goals">
+      <h2>目標までの道のり</h2>
+      <p class="kn-note">方針で決めた登録者の目標と、いまの人数。</p>
+      <div class="kn-goals" data-draw="goals" data-source="goals summary"></div>
+    </section>
+    <section id="channel-log">
+      <h2>チャンネル全体の記録</h2>
+      <p class="kn-note">アナリティクスのスクショから記録した数字（高評価・コメントは自分の分を含む）。</p>
+      <div class="kn-tablewrap">
+        <table data-source="channel" data-row-key="recorded" aria-label="チャンネル全体の記録">
+          <thead><tr><th data-field="recorded">記録日</th><th data-field="total_views">総再生</th><th data-field="views_7d">過去7日</th><th data-field="likes">高評価</th><th data-field="comments">コメント</th><th data-field="subscribers">登録者</th></tr></thead>
+          <tbody data-draw="chan"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  window.KN = {
+    num: (v) => (v === null || v === undefined || v === '' ? null : +v),
+    fmt: (v) => (v === null || v === undefined || isNaN(v) ? '—' : d3.format(',')(Math.round(v))),
+    series: ['仏教', '聖書', '故事'],
+    seriesColor: (s) => dash.colors[Math.max(0, ['仏教', '聖書', '故事'].indexOf(s))],
+    pill: { '公開中': 'pub', '完成': 'ready', '削除': 'gone' },
+    dateJa: (s) => { if (!s) return ''; const p = String(s).split('-'); return (+p[1]) + '/' + (+p[2]); },
+  };
+
+  dash.calc('summary', {
+    title: 'いまの数字のまとめ',
+    description: '動画一覧・チャンネルの記録・目標から、公開本数や目標までの残りを数える',
+    inputs: ['episodes', 'channel', 'goals'],
+    fn: (episodes, channel, goals) => {
+      const n = (v) => (v === null || v === undefined || v === '' ? null : +v);
+      const last = channel.slice().sort((a, b) => String(a.recorded).localeCompare(String(b.recorded))).pop() || {};
+      const g1 = goals.find((g) => String(g.stage) === '1') || {};
+      const pub = episodes.filter((e) => e.status === '公開中');
+      const subs = n(last.subscribers);
+      return [{
+        published: pub.length,
+        shorts_published: pub.filter((e) => e.format === 'ショート').length,
+        ready: episodes.filter((e) => e.status === '完成').length,
+        total_views: n(last.total_views),
+        subscribers: subs,
+        subs_goal: n(g1.subscribers),
+        shorts_goal: n(g1.shorts),
+        subs_left: subs === null || n(g1.subscribers) === null ? null : Math.max(0, n(g1.subscribers) - subs),
+        recorded: last.recorded || null,
+      }];
+    },
+  });
+
+  // 数字1つのドローイング
+  const one = (name, field, fmt) => dash.draw(name, (el) => {
+    const s = dash.data('summary');
+    el.classList.toggle('dash-skeleton', s.status === 'loading');
+    el.textContent = s.status === 'ok' && s.data[0] ? (fmt || KN.fmt)(s.data[0][field]) : '—';
+  });
+  [['t-pub', 'published'], ['t-views', 'total_views'], ['t-subs', 'subscribers'], ['t-left', 'subs_left'], ['t-ready', 'ready'],
+   ['k-views', 'total_views'], ['k-subs', 'subscribers'], ['k-shorts', 'shorts_published'], ['k-ready', 'ready']]
+    .forEach(([n, f]) => one(n, f));
+  dash.draw('k-views-sub', (el) => {
+    const s = dash.data('summary');
+    el.textContent = s.status === 'ok' && s.data[0] && s.data[0].recorded ? KN.dateJa(s.data[0].recorded) + ' のアナリティクスから' : '—';
+  });
+  const bar = (name, field, goalField) => dash.draw(name, (el) => {
+    const s = dash.data('summary');
+    const r = s.status === 'ok' ? s.data[0] : null;
+    const k = r && r[goalField] ? Math.min(1, (r[field] || 0) / r[goalField]) : 0;
+    el.replaceChildren();
+    const sp = document.createElement('span');
+    sp.style.width = (k * 100).toFixed(1) + '%';
+    el.appendChild(sp);
+  });
+  bar('k-subs-bar', 'subscribers', 'subs_goal');
+  bar('k-shorts-bar', 'shorts_published', 'shorts_goal');
+
+  // 凡例
+  dash.draw('legend', (el) => {
+    el.replaceChildren(...KN.series.map((s) => {
+      const span = document.createElement('span');
+      const i = document.createElement('i');
+      i.style.background = KN.seriesColor(s);
+      span.append(i, s);
+      return span;
+    }));
+  });
+
+  // 動画ごとの再生回数（横棒）
+  dash.draw('bars', (el) => {
+    const d = dash.data('episodes');
+    el.classList.toggle('dash-skeleton', d.status === 'loading');
+    if (d.status !== 'ok') { el.textContent = d.status === 'error' ? '動画一覧を読みこめませんでした。' : '—'; return; }
+    const rows = d.data.filter((e) => KN.num(e.views) !== null && e.status !== '削除')
+      .map((e) => ({ ...e, v: KN.num(e.views) })).sort((a, b) => b.v - a.v);
+    el.replaceChildren();
+    const W = el.clientWidth || 600, rowH = 34;
+    const labels = rows.map((r) => r.word + (r.format === '長編' ? '（長編）' : ''));
+    const svg = d3.select(el).append('svg').attr('role', 'img')
+      .attr('aria-label', '公開した動画ごとの再生回数の横棒グラフ');
+    const tmp = svg.append('g');
+    let lw = 0;
+    labels.forEach((t) => { const n = tmp.append('text').text(t); lw = Math.max(lw, n.node().getComputedTextLength()); });
+    tmp.remove();
+    const m = { l: lw + 12, r: 56, t: 4, b: 4 };
+    const H = rows.length * rowH + m.t + m.b;
+    svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    const x = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.v) || 1]).range([m.l, W - m.r]);
+    const y = (i) => m.t + i * rowH;
+    const tip = d3.select(el).append('div').attr('class', 'kn-tip').style('opacity', 0);
+    const g = svg.selectAll('g.r').data(rows).join('g').attr('class', 'r').attr('transform', (r, i) => `translate(0,${y(i)})`);
+    g.append('text').attr('x', m.l - 10).attr('y', rowH / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text((r, i) => labels[i]);
+    g.append('rect').attr('x', m.l).attr('y', 6).attr('height', rowH - 12).attr('rx', 3)
+      .attr('width', (r) => Math.max(2, x(r.v) - m.l)).style('fill', (r) => KN.seriesColor(r.series))
+      .attr('data-source', 'episodes').attr('data-field', 'views').attr('data-where', (r) => 'ep=' + encodeURIComponent(r.ep));
+    g.append('text').attr('class', 'val').attr('x', (r) => x(r.v) + 6).attr('y', rowH / 2).attr('dy', '0.35em').text((r) => KN.fmt(r.v));
+    g.on('pointermove', (ev, r) => {
+      const [px, py] = d3.pointer(ev, el);
+      tip.style('opacity', 1).style('left', Math.min(px + 12, W - 180) + 'px').style('top', (py + 12) + 'px')
+        .text(`${r.ep} ${r.word}：${KN.fmt(r.v)}回（${KN.dateJa(r.views_at)} 時点）`);
+    }).on('pointerleave', () => tip.style('opacity', 0));
+  });
+
+  // 表示する動画の切りかえ
+  dash.draw('status-filter', (sel) => {
+    const opts = [['', 'すべての動画'], ['公開中', '公開中'], ['完成', '完成（まだ出していない）'], ['削除', '削除した']];
+    sel.replaceChildren(...opts.map(([v, t]) => new Option(t, v)));
+    sel.value = window.KN.filter || '';
+    sel.onchange = () => { window.KN.filter = sel.value; dash.draw('cards'); };
+  });
+
+  // 作った動画のカード
+  dash.draw('cards', (el) => {
+    const d = dash.data('episodes');
+    el.classList.toggle('dash-skeleton', d.status === 'loading');
+    if (d.status !== 'ok') { el.textContent = d.status === 'error' ? '動画一覧を読みこめませんでした。' : '—'; return; }
+    const f = window.KN.filter || '';
+    const rows = d.data.filter((e) => !f || e.status === f);
+    el.replaceChildren(...rows.map((e) => {
+      const card = document.createElement('article');
+      card.className = 'kn-card' + (e.format === '長編' ? ' wide' : '') + (e.status === '削除' ? ' gone' : '');
+      card.dataset.key = encodeURIComponent(e.ep);
+      const box = document.createElement('div');
+      box.className = 'img';
+      if (typeof e.cover === 'string' && e.cover.startsWith('/_blob/')) {
+        const img = document.createElement('img');
+        img.src = e.cover; img.alt = e.word + 'のカバー'; img.loading = 'lazy';
+        box.appendChild(img);
+      }
+      const b = document.createElement('div');
+      b.className = 'body';
+      const ep = document.createElement('span'); ep.className = 'ep';
+      ep.textContent = e.ep + '・' + e.series + '・' + e.format;
+      const w = document.createElement('span'); w.className = 'word'; w.textContent = e.word;
+      w.dataset.source = 'episodes'; w.dataset.field = 'word'; w.dataset.where = 'ep=' + encodeURIComponent(e.ep);
+      const st = document.createElement('span'); st.className = 'story'; st.textContent = e.story;
+      const pill = document.createElement('span'); pill.className = 'kn-pill ' + (KN.pill[e.status] || '');
+      pill.textContent = e.status + (e.posted ? '　' + KN.dateJa(e.posted) : '');
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const len = document.createElement('span');
+      const sec = KN.num(e.length_s);
+      len.textContent = sec === null ? '' : (sec >= 60 ? Math.floor(sec / 60) + '分' + Math.round(sec % 60) + '秒' : sec + '秒');
+      const mu = document.createElement('span'); mu.textContent = '♪ ' + e.music;
+      meta.append(len, mu);
+      b.append(ep, w, st, pill, meta);
+      if (KN.num(e.views) !== null) {
+        const v = document.createElement('span'); v.className = 'views';
+        v.dataset.source = 'episodes'; v.dataset.field = 'views'; v.dataset.where = 'ep=' + encodeURIComponent(e.ep);
+        v.textContent = KN.fmt(KN.num(e.views)) + ' 回再生';
+        b.append(v);
+      }
+      card.append(box, b);
+      return card;
+    }));
+    if (!rows.length) el.textContent = 'この条件の動画はありません。';
+  });
+
+  // 目標までの道のり
+  dash.draw('goals', (el) => {
+    const g = dash.data('goals'), s = dash.data('summary');
+    el.classList.toggle('dash-skeleton', g.status === 'loading' || s.status === 'loading');
+    if (g.status !== 'ok' || s.status !== 'ok' || !s.data[0]) { el.textContent = g.status === 'error' ? '目標を読みこめませんでした。' : '—'; return; }
+    const cur = s.data[0].subscribers || 0;
+    el.replaceChildren(...g.data.map((r) => {
+      const t = KN.num(r.subscribers);
+      const box = document.createElement('div'); box.className = 'kn-goal';
+      const row = document.createElement('div'); row.className = 'row';
+      const a = document.createElement('span');
+      const bb = document.createElement('b'); bb.textContent = '段階' + r.stage + '　' + r.name;
+      a.append(bb, '　' + KN.dateJa(r.deadline) + 'まで');
+      const c = document.createElement('span');
+      const tv = document.createElement('b'); tv.textContent = KN.fmt(t);
+      tv.dataset.source = 'goals'; tv.dataset.field = 'subscribers'; tv.dataset.where = 'stage=' + r.stage;
+      c.append('登録者 ' + KN.fmt(cur) + ' / ', tv, ' 人');
+      row.append(a, c);
+      const bar = document.createElement('div'); bar.className = 'kn-bar';
+      const sp = document.createElement('span'); sp.style.width = (t ? Math.min(100, cur / t * 100) : 0).toFixed(1) + '%';
+      bar.appendChild(sp);
+      box.append(row, bar);
+      return box;
+    }));
+  });
+
+  // チャンネル全体の記録（表）
+  dash.draw('chan', (tb) => {
+    const d = dash.data('channel');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    d.data.slice().sort((a, b) => String(b.recorded).localeCompare(String(a.recorded))).forEach((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = encodeURIComponent(r.recorded);
+      ['recorded', 'total_views', 'views_7d', 'likes', 'comments', 'subscribers'].forEach((k) => {
+        const td = document.createElement('td');
+        td.textContent = k === 'recorded' ? r.recorded : KN.fmt(KN.num(r[k]));
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  });
+</script>
